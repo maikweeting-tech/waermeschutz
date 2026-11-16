@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Wärmeschutz-Rechner</title>
+<meta name="description" content="U-Wert, Temperaturverlauf und Mindestwärmeschutz nach DIN EN ISO 6946 / DIN 4108-2">
+<meta name="theme-color" content="#9C4A1A">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-titel">
+    <div id="titel">Wärmeschutz-Rechner</div>
+    <div class="topbar-sub">U-Wert · Temperaturverlauf · Mindestwärmeschutz</div>
+  </div>
+</header>
+
+<main>
+
+  <!-- ── Randbedingungen ──────────────────────── -->
+  <section class="karte">
+    <h2>Randbedingungen</h2>
+    <div class="reihe drei">
+      <label class="feld">Bauteil<select id="bauteil"></select></label>
+      <label class="feld">Raumnutzung
+        <select id="raum">
+          <option value="normal">Normal beheizt (θ_i ≥ 19 °C)</option>
+          <option value="niedrig">Niedrig beheizt (12…19 °C)</option>
+        </select>
+      </label>
+      <label class="feld">Wärmestromrichtung
+        <select id="richtung">
+          <option value="horizontal">horizontal</option>
+          <option value="aufwaerts">aufwärts</option>
+          <option value="abwaerts">abwärts</option>
+        </select>
+      </label>
+    </div>
+    <div class="reihe drei">
+      <label class="feld">θ<sub>i</sub> <span class="einheit-label">[°C]</span>
+        <input type="number" id="theta-i" value="20" step="any">
+      </label>
+      <label class="feld">θ<sub>e</sub> <span class="einheit-label">[°C]</span>
+        <input type="number" id="theta-e" value="-5" step="any">
+      </label>
+      <label class="feld">DIN 4108-2
+        <select id="din-ausgabe">
+          <option value="2013-02">2013-02</option>
+          <option value="2026-05">2026-05</option>
+        </select>
+      </label>
+    </div>
+  </section>
+
+  <!-- ── Schichtaufbau ────────────────────────── -->
+  <section class="karte">
+    <h2>Schichtaufbau <span class="hinweis">(innen → außen)</span></h2>
+    <div class="tabwrap">
+      <table class="tab" id="tab-schichten">
+        <thead><tr>
+          <th class="zahl">Nr.</th>
+          <th>Typ</th>
+          <th>Baustoff</th>
+          <th class="zahl">d [cm]</th>
+          <th class="zahl">λ [W/(mK)]</th>
+          <th>Quelle λ</th>
+          <th></th>
+        </tr></thead>
+        <tbody id="schichten"></tbody>
+      </table>
+    </div>
+    <button type="button" class="btn btn-klein no-print" id="btn-add" style="margin-top:10px">+ Schicht</button>
+  </section>
+
+  <!-- ── Korrekturwerte ───────────────────────── -->
+  <section class="karte">
+    <details class="extra" id="det-korr">
+      <summary>Korrekturwerte ΔU</summary>
+      <div class="inhalt">
+
+        <h3>Luftspalte in der Dämmung (ΔU<sub>g</sub>)</h3>
+        <div class="reihe">
+          <label class="feld">Korrekturstufe
+            <select id="lu-stufe">
+              <option value="0" selected>Stufe 0 – keine Korrektur</option>
+              <option value="1">Stufe 1 – ΔU″ = 0,01</option>
+              <option value="2">Stufe 2 – ΔU″ = 0,04</option>
+            </select>
+          </label>
+          <label class="feld">Betroffene Dämmschicht Nr.
+            <input type="number" id="lu-schicht" min="1" step="1" placeholder="z.B. 2">
+          </label>
+        </div>
+
+        <h3 style="margin-top:18px">Befestigungselemente (ΔU<sub>f</sub>)</h3>
+        <label class="schalter"><input type="checkbox" id="bef-aktiv"> Befestigungselemente vorhanden</label>
+        <div id="bef-felder" hidden>
+          <div class="reihe drei">
+            <label class="feld">n<sub>f</sub> <span class="einheit-label">[1/m²]</span>
+              <input type="number" id="bef-nf" step="any" min="0">
+            </label>
+            <label class="feld">Ø <span class="einheit-label">[mm]</span>
+              <input type="number" id="bef-dm" step="any" min="0">
+            </label>
+            <label class="feld">λ<sub>f</sub> <span class="einheit-label">[W/(mK)]</span>
+              <input type="number" id="bef-lambda" step="any" min="0">
+            </label>
+          </div>
+          <div class="reihe">
+            <label class="schalter"><input type="checkbox" id="bef-voll" checked> Volle Durchdringung</label>
+            <label class="feld">Durchdrungene Schicht Nr.
+              <input type="number" id="bef-schicht" min="1" step="1" placeholder="z.B. 2">
+            </label>
+          </div>
+        </div>
+
+        <h3 style="margin-top:18px">Umkehrdach (ΔU<sub>r</sub>)</h3>
+        <label class="feld">ΔU<sub>r</sub> manuell <span class="einheit-label">[W/(m²K)]</span>
+          <input type="number" id="delta-ur" value="0" step="any" min="0">
+        </label>
+        <p class="hinweis">Nur bei Umkehrdächern. Wert muss separat ermittelt werden.</p>
+      </div>
+    </details>
+  </section>
+
+  <!-- ── Inhomogene Schicht ───────────────────── -->
+  <section class="karte">
+    <details class="extra" id="det-inhom">
+      <summary>Inhomogene Schicht (z.B. Sparren / Gefach)</summary>
+      <div class="inhalt">
+        <label class="schalter"><input type="checkbox" id="inhom-aktiv"> Inhomogene Schicht vorhanden</label>
+        <div id="inhom-felder" hidden>
+          <div class="reihe">
+            <label class="feld">Schicht Nr.
+              <input type="number" id="inhom-nr" min="1" step="1">
+            </label>
+            <label class="feld">Material B
+              <input type="text" id="inhom-name" placeholder="z.B. KVH C24">
+            </label>
+          </div>
+          <div class="reihe drei">
+            <label class="feld">λ<sub>B</sub> <span class="einheit-label">[W/(mK)]</span>
+              <input type="number" id="inhom-lambda" step="any" min="0">
+            </label>
+            <label class="feld">f<sub>a</sub> <span class="einheit-label">(Anteil A)</span>
+              <input type="number" id="inhom-fa" step="any" min="0" max="1" placeholder="0,88">
+            </label>
+            <label class="feld">f<sub>b</sub> <span class="einheit-label">(Anteil B)</span>
+              <input type="number" id="inhom-fb" step="any" min="0" max="1" placeholder="0,12">
+            </label>
+          </div>
+          <p class="hinweis">f<sub>a</sub> + f<sub>b</sub> = 1,0. Material A = Stoff in der Schichttabelle oben.</p>
+        </div>
+      </div>
+    </details>
+  </section>
+
+  <!-- ── Berechnen ────────────────────────────── -->
+  <button type="button" class="btn btn-primaer btn-voll no-print" id="btn-calc" style="margin-bottom:20px">Berechnen</button>
+
+  <!-- ── Ergebnisse ───────────────────────────── -->
+  <div id="ergebnis" hidden></div>
+
+</main>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script src="data.js"></script>
+<script src="calc.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
