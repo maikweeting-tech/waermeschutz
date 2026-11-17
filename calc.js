@@ -307,3 +307,24 @@ function plausChecks(U, bauteilId, schichtenR) {
   }
   return out;
 }
+
+// ── Übergabe an die Heizlast-App (gemeinsames Format „fh21.bauteile“) ──
+// Gleicher localStorage-Schlüssel in beiden Apps; funktioniert nur bei gleicher Herkunft
+// (z. B. beide unter maikweeting-tech.github.io). Sonst JSON-Datei.
+const FH21_BAUTEILE_KEY = 'fh21.bauteile';
+function heizlastBauteil(e, name, artLabel, datumIso) {
+  const U = Math.round(e.U * 1000) / 1000;
+  const tag = datumIso.slice(0, 10).split('-').reverse().join('.');
+  return {
+    id: 'ws-' + datumIso.replace(/\D/g, '').slice(0, 14),
+    name, art: artLabel, artId: e.bauteilId, U,
+    quelle: `Wärmeschutz-App, Bauteil „${name}“, U nach DIN EN ISO 6946 inkl. ΔU (${tag})`,
+    datum: datumIso,
+    schichten: e.sR.map(s => ({ name: s.name, d: s.d, lambda: s.lambda, R: Math.round(s.R * 1000) / 1000 })),
+    RT: Math.round(e.RT * 1000) / 1000, dU: Math.round(e.dU * 1000) / 1000
+  };
+}
+// Liste ergänzen; gleicher Name ersetzt den alten Eintrag
+function bauteilListeErgaenzen(liste, b) {
+  return (Array.isArray(liste) ? liste.filter(x => x.name !== b.name) : []).concat([b]);
+}

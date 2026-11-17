@@ -64,6 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   $('btn-link').addEventListener('click', kopiereLink);
   $('btn-druck').addEventListener('click', () => { if ($('ergebnis').hidden) berechnen(); window.print(); });
+  $('btn-heizlast').addEventListener('click', anHeizlast);
 
   // Startzustand: aus Link oder 3 leere Zeilen
   const z = leseLink();
@@ -245,6 +246,29 @@ function kopiereLink() {
   (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject())
     .then(() => toast('Link kopiert – enthält alle Eingaben.'))
     .catch(() => window.prompt('Link kopieren:', url));
+}
+
+function anHeizlast() {
+  _erg = null;
+  berechnen();
+  if (!_erg) return;
+  const bt = BAUTEILE.find(b => b.id === _erg.bauteilId);
+  const name = (window.prompt('Name des Bauteils für die Heizlast-App (z. B. „AW 1 – KS + WDVS“):', '') || '').trim();
+  if (!name) { toast('Kein Name – nichts übergeben.'); return; }
+  const b = heizlastBauteil(_erg, name, bt ? bt.label : _erg.bauteilId, new Date().toISOString());
+  let gespeichert = false;
+  try {
+    const alt = JSON.parse(localStorage.getItem(FH21_BAUTEILE_KEY) || '[]');
+    localStorage.setItem(FH21_BAUTEILE_KEY, JSON.stringify(bauteilListeErgaenzen(alt, b)));
+    gespeichert = true;
+  } catch { /* privat/gesperrt: nur Datei */ }
+  const blob = new Blob([JSON.stringify({ format: 'fh21.bauteile', version: 1, bauteile: [b] }, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'bauteil_' + name.replace(/[^\wäöüÄÖÜß-]+/g, '_') + '.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  toast(`„${name}“ (U = ${fmtU(b.U)} W/(m²K)) übergeben${gespeichert ? ' – gespeichert und als Datei geladen' : ' – als Datei geladen'}.`);
 }
 
 function nummeriere() {
