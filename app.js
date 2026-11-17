@@ -46,6 +46,8 @@ document.addEventListener('DOMContentLoaded', () => {
   $('ergebnis').addEventListener('click', e => {
     const b = e.target.closest('[data-massstab]');
     if (b) setzeMassstab(b.dataset.massstab);
+    const g = e.target.closest('[data-glaser]');
+    if (g) setzeGlaserMassstab(g.dataset.glaser);
   });
 
   // Aufgabe: Beispiele, Link, Drucken
@@ -82,7 +84,7 @@ function stoffOptionen() {
     h += `<optgroup label="${esc(g.gruppe)}">`;
     g.stoffe.forEach(s => {
       const lf = (s.lambda < 0.1 ? s.lambda.toFixed(3) : s.lambda.toFixed(2)).replace('.', ',');
-      h += `<option value="${esc(s.name)}" data-lambda="${s.lambda}">${esc(s.name)} · λ ${lf}</option>`;
+      h += `<option value="${esc(s.name)}" data-lambda="${s.lambda}" data-mu="${s.mu}" data-d="${s.d || ''}">${esc(s.name)} · λ ${lf} · μ ${s.mu.toLocaleString('de-DE')}</option>`;
     });
     h += '</optgroup>';
   });
@@ -93,9 +95,12 @@ function onStoff(sel) {
   const tr = sel.closest('tr');
   const name = tr.querySelector('.s-name');
   if (!sel.value) { name.hidden = false; name.value = ''; return; }
+  const o = sel.selectedOptions[0].dataset;
   name.hidden = true;
   name.value = sel.value;
-  tr.querySelector('.s-lambda').value = sel.selectedOptions[0].dataset.lambda;
+  tr.querySelector('.s-lambda').value = o.lambda;
+  tr.querySelector('.s-mu').value = o.mu;
+  if (o.d) tr.querySelector('.s-d').value = o.d;
   tr.querySelector('.s-quelle').value = 'Schneider 26';
 }
 
@@ -108,6 +113,7 @@ function addSchicht() {
     <td><select class="s-stoff">${stoffOptionen()}</select><input type="text" class="s-name" placeholder="oder eigener Baustoff"></td>
     <td><input type="number" class="s-d" step="any" min="0" placeholder="cm"></td>
     <td><input type="number" class="s-lambda" step="any" min="0" placeholder="W/(mK)"></td>
+    <td><input type="number" class="s-mu" step="any" min="0" placeholder="–"></td>
     <td><input type="text" class="s-quelle" placeholder="Schneider …"></td>
     <td><button type="button" class="btn-del btn-icon no-print" title="Entfernen">&times;</button></td>`;
   tb.appendChild(tr);
@@ -126,7 +132,7 @@ const STANDARD = { raum:'normal', 'theta-i':'20', 'theta-e':'-5', 'din-ausgabe':
 function zustand() {
   const f = {};
   FELDER.forEach(id => { const el = $(id); f[id] = el.type === 'checkbox' ? el.checked : el.value; });
-  const s = [...$('schichten').rows].map(r => ['.typ-sel','.s-stoff','.s-name','.s-d','.s-lambda','.s-quelle'].map(k => r.querySelector(k).value));
+  const s = [...$('schichten').rows].map(r => ['.typ-sel','.s-stoff','.s-name','.s-d','.s-lambda','.s-quelle','.s-mu'].map(k => r.querySelector(k).value));
   return { f, s };
 }
 
@@ -141,7 +147,7 @@ function ladeZustand(z) {
   $('det-korr').open = $('lu-stufe').value !== '0' || $('bef-aktiv').checked || (nr($('delta-ur')) || 0) !== 0;
   $('det-inhom').open = $('inhom-aktiv').checked;
   $('schichten').innerHTML = '';
-  z.s.forEach(([typ, stoff, name, d, lam, quelle]) => {
+  z.s.forEach(([typ, stoff, name, d, lam, quelle, mu]) => {
     const tr = addSchicht();
     const ts = tr.querySelector('.typ-sel');
     ts.value = typ === 'luft_ruhend' ? 'luft_ruhend' : 'baustoff';
@@ -154,6 +160,7 @@ function ladeZustand(z) {
     tr.querySelector('.s-d').value = d;
     if (ts.value === 'baustoff') tr.querySelector('.s-lambda').value = lam;
     tr.querySelector('.s-quelle').value = quelle || '';
+    if (mu !== undefined) tr.querySelector('.s-mu').value = mu;
   });
   if (!z.s.length) addSchicht();
 }
@@ -163,7 +170,7 @@ function beispielZustand(b) {
   const f = { ...STANDARD, richtung: bt ? bt.richtung : 'horizontal', ...b.f };
   const s = b.s.map(([typ, stoff, name, d]) => {
     const st = BAUSTOFFE.flatMap(g => g.stoffe).find(x => x.name === stoff);
-    return [typ, stoff, name, String(d), st ? String(st.lambda) : '', st ? 'Schneider 26' : ''];
+    return [typ, stoff, name, String(d), st ? String(st.lambda) : '', st ? 'Schneider 26' : '', st ? String(st.mu) : (typ === 'luft_ruhend' ? '1' : '')];
   });
   return { f, s };
 }
@@ -208,6 +215,7 @@ function onTyp(sel) {
     lam.disabled = true; lam.value = ''; lam.placeholder = '(Tabelle)';
     stoff.hidden = true; stoff.value = '';
     name.hidden = false; name.value = 'ruhende Luftschicht';
+    tr.querySelector('.s-mu').value = '1';
   } else {
     lam.disabled = false; lam.placeholder = 'W/(mK)';
     stoff.hidden = false;
@@ -223,7 +231,8 @@ function leseSchichten() {
     const d = nr(r.querySelector('.s-d'));
     const lambda = nr(r.querySelector('.s-lambda'));
     const quelle = r.querySelector('.s-quelle').value.trim();
-    return { typ, name, d, lambda, quelle };
+    const mu = nr(r.querySelector('.s-mu'));
+    return { typ, name, d, lambda, quelle, mu };
   }).filter(s => !isNaN(s.d) && s.d > 0 && (s.typ !== 'baustoff' || (!isNaN(s.lambda) && s.lambda > 0)));
 }
 
@@ -299,8 +308,11 @@ function berechnen() {
   const minErg = pruefeMin(bauteilId, raum, Rvorh, din);
   const schimmel = pruefeSchimmel(Rvorh);
   const plaus = plausChecks(U, bauteilId, sR);
+  const bt = BAUTEILE.find(b => b.id === bauteilId);
+  const muFehlt = schichten.filter(s => !(s.mu > 0)).map(s => s.name || '?');
+  const feuchte = muFehlt.length ? { muFehlt } : { ...glaser(schichten, richtung, bt && bt.rminKey === 'dach'), schichten };
 
-  zeigeErgebnis({ sR, rsi, rse, RT, U0, dg, df, dUr, dU, U, Rvorh, temp, minErg, schimmel, plaus, ti, te, richtung, bauteilId, raum, din, inhomErg });
+  zeigeErgebnis({ sR, rsi, rse, RT, U0, dg, df, dUr, dU, U, Rvorh, temp, minErg, schimmel, feuchte, plaus, ti, te, richtung, bauteilId, raum, din, inhomErg });
 }
 
 // ── Ergebnisanzeige ───────────────────────────────────────────
@@ -316,6 +328,7 @@ function zeigeErgebnis(e) {
     htmlTemperatur(e) +
     htmlNachweis(e) +
     htmlSchimmel(e) +
+    htmlGlaser(e) +
     htmlPlaus(e) +
     htmlZusammenfassung(e);
   c.scrollIntoView({ behavior: 'smooth' });
@@ -324,7 +337,7 @@ function zeigeErgebnis(e) {
 // ── Grafik Temperaturverlauf (SVG) ────────────────────────────
 const GRUPPE_FARBE = {
   'Dämmstoffe': '#f2c94c', 'Mauerwerk': '#c0573e', 'Beton': '#9aa0a6', 'Holz / Holzwerkstoffe': '#b07d48',
-  'Putze / Mörtel / Estriche': '#e3d7c1', 'Platten / Bekleidungen': '#d0d0d0'
+  'Putze / Mörtel / Estriche': '#e3d7c1', 'Platten / Bekleidungen': '#d0d0d0', 'Folien / Bahnen': '#6f6fb8'
 };
 function schichtFarbe(s) {
   if (s.typ === 'luft_ruhend') return '#bfe3f5';
@@ -563,7 +576,128 @@ function htmlPlaus(e) {
   e.plaus.forEach(p => {
     items += `<div class="check-item"><div class="check-dot ${p.ok ? 'ok' : 'warn'}"></div><div>${esc(p.text)}<br><span class="klein hinweis">${esc(p.hinweis)}</span></div></div>`;
   });
-  return `<div class="karte"><p class="erg-titel">6 – Plausibilitätscheck</p>${items}</div>`;
+  return `<div class="karte"><p class="erg-titel">7 – Plausibilitätscheck</p>${items}</div>`;
+}
+
+// 6 – Feuchteschutz: Glaser-Verfahren
+const fmtP = v => Math.round(v).toLocaleString('de-DE');
+const fmtM = v => v > 0 && v < 0.0005 ? '< 0,001' : v.toFixed(3).replace('.', ',');
+const fmtSd = v => (v >= 100 ? v.toFixed(0) : v >= 1 ? v.toFixed(2) : v.toFixed(3)).replace('.', ',');
+const fmtG = v => (v * 3600 * 1000).toFixed(3).replace('.', ',');   // kg/(m²s) → g/(m²h)
+
+function htmlGlaser(e) {
+  const F = e.feuchte, G = GLASER, T = G.tau, V = G.verd;
+  const titel = '<p class="erg-titel">6 – Feuchteschutz: Tauwasser im Bauteil (Glaser-Verfahren, DIN 4108-3)</p>';
+  if (F.muFehlt) return `<div class="karte">${titel}<p class="hinweis">Für den Tauwassernachweis fehlt μ bei: ${F.muFehlt.map(esc).join(', ')}.</p></div>`;
+
+  const name = k => esc(F.schichten[k].name || 'Schicht ' + (k+1));
+  const grenze = k => k === 0 ? 'innere Oberfläche' : k === F.n ? 'äußere Oberfläche' : `zwischen ${k} und ${k+1}`;
+  let zeilen = `<tr><td></td><td>innere Oberfläche</td><td></td><td></td><td></td><td class="zahl mono">0,000</td><td class="zahl mono">${fmtT(F.theta[0])}</td><td class="zahl mono">${fmtP(F.ps[0])}</td></tr>`;
+  F.schichten.forEach((s, i) => {
+    const tw = F.ebenen.some(eb => eb.k === i+1);
+    zeilen += `<tr${tw ? ' class="markiert"' : ''}><td class="zahl">${i+1}</td><td>${name(i)}${tw ? ' <span class="badge nok">Tauwasser dahinter</span>' : ''}</td>
+      <td class="zahl mono">${fmtR(s.d/100)}</td><td class="zahl mono">${s.mu.toLocaleString('de-DE')}</td><td class="zahl mono">${fmtSd(F.sd[i])}</td>
+      <td class="zahl mono">${fmtSd(F.x[i+1])}</td><td class="zahl mono">${fmtT(F.theta[i+1])}</td><td class="zahl mono">${fmtP(F.ps[i+1])}</td></tr>`;
+  });
+
+  let rw = `p<sub>i</sub> = φ<sub>i</sub> · p<sub>sat</sub>(θ<sub>i</sub>) = ${fmtEta(T.phiI)} · ${fmtP(psat(T.ti))} = ${fmtP(F.pi)} Pa
+p<sub>e</sub> = φ<sub>e</sub> · p<sub>sat</sub>(θ<sub>e</sub>) = ${fmtEta(T.phiE)} · ${fmtP(psat(T.te))} = ${fmtP(F.pe)} Pa
+S<sub>d</sub> = Σ μ·d = ${fmtSd(F.Sd)} m\n`;
+  if (!F.tauwasser) {
+    rw += `\nDie Gerade von p<sub>i</sub> nach p<sub>e</sub> liegt an allen Grenzflächen unter p<sub>sat</sub> → <span class="erg">kein Tauwasser</span>.
+g = δ<sub>0</sub> · (p<sub>i</sub> − p<sub>e</sub>) / S<sub>d</sub> = ${fmtG(F.g[0])} g/(m²h)`;
+  } else {
+    rw += `\n<strong>Tauperiode</strong> (${T.stunden} h, gespannter Faden unter p<sub>sat</sub>)\n`;
+    F.huelle.slice(1).forEach((b, j) => {
+      const a = F.huelle[j];
+      const von = a.k < 0 ? 'p<sub>i</sub>' : `p<sub>c</sub>(${grenze(a.k)})`, bis = b.k > F.n ? 'p<sub>e</sub>' : `p<sub>c</sub>(${grenze(b.k)})`;
+      rw += `g<sub>${j+1}</sub> = δ<sub>0</sub> · (${von} − ${bis}) / s<sub>d</sub> = 2,0·10⁻¹⁰ · (${fmtP(a.p)} − ${fmtP(b.p)}) / ${fmtSd(b.x - a.x)} = ${fmtG(F.g[j])} g/(m²h)\n`;
+    });
+    F.ebenen.forEach((eb, j) => {
+      rw += `Ebene ${grenze(eb.k)}: θ<sub>c</sub> = ${fmtT(eb.theta)} °C, p<sub>c</sub> = ${fmtP(eb.p)} Pa
+  m<sub>c</sub> = t<sub>c</sub> · (g<sub>${j+1}</sub> − g<sub>${j+2}</sub>) = ${T.stunden} h · (${fmtG(F.g[j])} − ${fmtG(F.g[j+1])}) g/(m²h) = <span class="erg">${fmtM(eb.mc)} kg/m²</span>\n`;
+    });
+    const v = F.verd;
+    rw += `\n<strong>Verdunstungsperiode</strong> (${V.stunden} h, innen ${fmtT(V.ti)} °C / ${Math.round(V.phiI*100)} %, außen ${fmtT(V.te)} °C / ${Math.round(V.phiE*100)} %${v.dach ? ', Dach: Außenoberfläche ' + fmtT(V.teDach) + ' °C' : ''})
+p<sub>i</sub> = ${fmtP(v.piV)} Pa, p<sub>e</sub> = ${fmtP(v.peV)} Pa, in der Tauwasserzone: θ = ${fmtT(v.thetaA)} °C → p<sub>c</sub> = ${fmtP(v.pcA)} Pa${v.xA !== v.xB ? ` bzw. θ = ${fmtT(v.thetaB)} °C → ${fmtP(v.pcB)} Pa` : ''}
+g<sub>i</sub> = δ<sub>0</sub> · (p<sub>c</sub> − p<sub>i</sub>) / s<sub>d,i</sub> = 2,0·10⁻¹⁰ · (${fmtP(v.pcA)} − ${fmtP(v.piV)}) / ${fmtSd(v.xA)} = ${fmtG(v.gI)} g/(m²h)
+g<sub>e</sub> = δ<sub>0</sub> · (p<sub>c</sub> − p<sub>e</sub>) / s<sub>d,e</sub> = 2,0·10⁻¹⁰ · (${fmtP(v.pcB)} − ${fmtP(v.peV)}) / ${fmtSd(F.Sd - v.xB)} = ${fmtG(v.gE)} g/(m²h)
+m<sub>ev</sub> = t<sub>ev</sub> · (g<sub>i</sub> + g<sub>e</sub>) = <span class="erg">${fmtM(F.mev)} kg/m²</span>`;
+  }
+
+  const cls = F.ok ? 'ok' : 'nok', sym = F.ok ? '✓' : '✗';
+  const urteil = !F.tauwasser ? 'Kein Tauwasser im Bauteil'
+    : `Tauwasser m<sub>c</sub> = ${fmtM(F.mc)} kg/m² – ${F.ok ? 'zulässig' : 'NICHT zulässig'}`;
+  const detail = !F.tauwasser ? 'Nachweis erfüllt'
+    : `m<sub>c</sub> ${F.okMc ? '≤' : '>'} ${fmtM(G.mcMax)} kg/m², m<sub>ev</sub> = ${fmtM(F.mev)} kg/m² ${F.okEv ? '≥' : '<'} m<sub>c</sub>`;
+
+  return `<div class="karte">${titel}
+    <p class="hinweis">Tauperiode ${T.stunden} h: innen ${fmtT(T.ti)} °C / ${Math.round(T.phiI*100)} %, außen ${fmtT(T.te)} °C / ${Math.round(T.phiE*100)} %; R<sub>si</sub> = ${fmtR(G.rsi)}, R<sub>se</sub> = ${fmtR(G.rse)} m²K/W; δ<sub>0</sub> = 2,0·10⁻¹⁰ kg/(m·s·Pa). Unabhängig von θ<sub>i</sub>/θ<sub>e</sub> oben.</p>
+    <div class="massstab no-print" role="group" aria-label="Maßstab des Glaser-Diagramms">
+      <button type="button" class="btn btn-klein" data-glaser="sd" aria-pressed="${_glaserMassstab === 'sd'}"><span>Maßstab s<sub>d</sub></span></button>
+      <button type="button" class="btn btn-klein" data-glaser="d" aria-pressed="${_glaserMassstab === 'd'}">Maßstab Dicke d</button>
+    </div>
+    <div id="glaser-box">${glaserSVG(F, _glaserMassstab)}</div>
+    <div class="tabwrap"><table class="tab">
+      <thead><tr><th class="zahl">Nr.</th><th>Schicht</th><th class="zahl">d [m]</th><th class="zahl">μ [–]</th><th class="zahl">s<sub>d</sub> [m]</th><th class="zahl">Σs<sub>d</sub> [m]</th><th class="zahl">θ [°C]</th><th class="zahl">p<sub>sat</sub> [Pa]</th></tr></thead>
+      <tbody>${zeilen}</tbody>
+    </table></div>
+    <p class="hinweis klein">θ und p<sub>sat</sub> jeweils an der äußeren Grenzfläche der Schicht (Tauperiode).</p>
+    <div class="rechenweg">${rw}</div>
+    <div class="ampel ${cls}" style="margin-top:12px"><div class="licht">${sym}</div><div>${urteil}<br><small>${detail}</small></div></div>
+    ${F.tauwasser ? `<p class="hinweis klein" style="margin-top:8px">Grenzwert 0,5 kg/m², wenn die Tauwasserebene an einer nicht kapillar wasseraufnahmefähigen Schicht liegt (z.B. Folie, Mineralwolle). Bei Holz zusätzlich Massezunahme ≤ 5 % (Holzwerkstoffe ≤ 3 %) prüfen.</p>` : ''}
+    ${e.inhomErg ? '<p class="hinweis klein">Inhomogene Schicht: Nachweis im Gefachbereich (Baustoff aus der Schichttabelle).</p>' : ''}
+    <p class="pruefen">μ-Werte und Randbedingungen aus dem Gedächtnis – gegen Schneider 26 / DIN 4108-3 prüfen!</p>
+  </div>`;
+}
+
+let _glaserMassstab = 'sd';
+function glaserSVG(F, massstab) {
+  const W = 640, H = 330, x0 = 62, x1 = 610, y0 = 26, y1 = 270, n = F.n;
+  const dk = [0]; F.schichten.forEach(s => dk.push(dk[dk.length-1] + s.d));
+  const pos = massstab === 'd' ? dk : F.x, ges = pos[n] || 1;
+  const X = k => x0 + pos[k] / ges * (x1 - x0);
+  // p an jeder Grenzfläche aus dem gespannten Faden (linear in s_d)
+  const pAn = xs => { const h = F.huelle; for (let j = 1; j < h.length; j++) if (xs <= h[j].x + 1e-12) return h[j-1].p + (h[j].p - h[j-1].p) * (xs - h[j-1].x) / ((h[j].x - h[j-1].x) || 1); return h[h.length-1].p; };
+  const p = F.x.map(pAn);
+  const pMax = Math.ceil(Math.max(F.pi, ...F.ps) * 1.05 / 500) * 500;
+  const Y = v => y1 - v / pMax * (y1 - y0);
+  const f1 = v => v.toFixed(1);
+
+  let s = `<svg class="grafik" viewBox="0 0 ${W} ${H}" role="img" aria-label="Glaser-Diagramm">`;
+  F.schichten.forEach((sch, i) => {
+    const xa = X(i), xb = X(i+1);
+    s += `<rect x="${f1(xa)}" y="${y0}" width="${f1(Math.max(xb-xa, .5))}" height="${y1-y0}" fill="${schichtFarbe(sch)}" fill-opacity=".45" class="g-schicht"><title>${esc(sch.name || 'Schicht '+(i+1))}: s_d = ${fmtSd(F.sd[i])} m</title></rect>`;
+    if (xb - xa >= 9) s += `<text x="${f1((xa+xb)/2)}" y="${y1+16}" class="g-nr">${i+1}</text>`;
+  });
+  for (let v = 0; v <= pMax; v += 500) {
+    s += `<line x1="${x0}" x2="${x1}" y1="${f1(Y(v))}" y2="${f1(Y(v))}" class="g-raster"/>`;
+    s += `<text x="${x0-6}" y="${f1(Y(v)+4)}" class="g-achse">${v.toLocaleString('de-DE')}</text>`;
+  }
+  s += `<text x="${x0}" y="${y0-10}" class="g-achse" style="text-anchor:start">p [Pa]</text>`;
+  // p_sat innerhalb der Schichten gekrümmt: je Schicht 12 Stützstellen
+  const sat = [];
+  for (let i = 0; i < n; i++) for (let t = 0; t <= 12; t++) {
+    const u = t / 12, th = F.theta[i] + (F.theta[i+1] - F.theta[i]) * u;
+    sat.push(f1(X(i) + (X(i+1) - X(i)) * u) + ',' + f1(Y(psat(th))));
+  }
+  s += `<polyline points="${sat.join(' ')}" class="g-psat"/>`;
+  s += `<polyline points="${p.map((v, k) => f1(X(k)) + ',' + f1(Y(v))).join(' ')}" class="g-linie"/>`;
+  F.ebenen.forEach(eb => {
+    s += `<circle cx="${f1(X(eb.k))}" cy="${f1(Y(eb.p))}" r="6" class="g-tau"/>`;
+    s += `<text x="${f1(X(eb.k))}" y="${f1(Y(eb.p) - 12)}" class="g-wert">Tauwasser</text>`;
+  });
+  s += `<text x="${x0}" y="${y1+31}" class="g-seite" style="text-anchor:start">← innen</text>`;
+  s += `<text x="${x1}" y="${y1+31}" class="g-seite" style="text-anchor:end">außen →</text>`;
+  s += `<line x1="${W/2-150}" x2="${W/2-128}" y1="${H-10}" y2="${H-10}" class="g-psat"/><text x="${W/2-124}" y="${H-6}" class="g-seite" style="text-anchor:start">Sättigungsdampfdruck p<tspan baseline-shift="sub" font-size="8">sat</tspan></text>`;
+  s += `<line x1="${W/2+40}" x2="${W/2+62}" y1="${H-10}" y2="${H-10}" class="g-linie"/><text x="${W/2+66}" y="${H-6}" class="g-seite" style="text-anchor:start">Dampfdruck p (${massstab === 'd' ? 'Maßstab d' : 'Gerade im Maßstab s_d'})</text>`;
+  return s + '</svg>';
+}
+
+function setzeGlaserMassstab(m) {
+  _glaserMassstab = m;
+  $('glaser-box').innerHTML = glaserSVG(_erg.feuchte, m);
+  document.querySelectorAll('[data-glaser]').forEach(b => b.setAttribute('aria-pressed', b.dataset.glaser === m));
 }
 
 // 6 – Zusammenfassung
@@ -575,7 +709,10 @@ function htmlZusammenfassung(e) {
     <p>Das Bauteil <strong>${esc(bt ? bt.label : '')}</strong> erreicht einen Wärmedurchgangskoeffizienten von
        <strong>U = ${fmtU(e.U)} W/(m²K)</strong>.
        Der winterliche Mindestwärmeschutz nach DIN 4108-2 ist <strong>${minOk}</strong>,
-       der Schimmelnachweis in der Fläche ist <strong>${e.schimmel.ok ? 'erfüllt' : 'NICHT erfüllt'}</strong> (f<sub>Rsi</sub> = ${fmtR(e.schimmel.fRsi)}).</p>
+       der Schimmelnachweis in der Fläche ist <strong>${e.schimmel.ok ? 'erfüllt' : 'NICHT erfüllt'}</strong> (f<sub>Rsi</sub> = ${fmtR(e.schimmel.fRsi)}).
+       ${e.feuchte.muFehlt ? 'Der Tauwassernachweis wurde nicht geführt (μ fehlt).'
+         : !e.feuchte.tauwasser ? 'Im Bauteil fällt nach Glaser <strong>kein Tauwasser</strong> aus.'
+         : `Im Bauteil fallen nach Glaser <strong>${fmtM(e.feuchte.mc)} kg/m² Tauwasser</strong> aus – das ist <strong>${e.feuchte.ok ? 'zulässig' : 'NICHT zulässig'}</strong>.`}</p>
     <div class="hinweis-box">
       <strong>Annahmen und offene Punkte:</strong>
       <ul style="margin:4px 0 0;padding-left:1.2em">

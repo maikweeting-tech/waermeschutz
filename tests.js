@@ -9,7 +9,7 @@ function pruefe(name, ist, soll) {
   fehler++; console.log(`✗ ${name}\n    ist: ${ist}\n   soll: ${soll}`);
 }
 const st = name => BAUSTOFFE.flatMap(g => g.stoffe).find(s => s.name === name);
-const schicht = (name, dCm) => ({ typ: 'baustoff', name, d: dCm, lambda: st(name).lambda });
+const schicht = (name, dCm) => ({ typ: 'baustoff', name, d: dCm, lambda: st(name).lambda, mu: st(name).mu });
 const summeR = (sch, ri) => sch.reduce((a, s) => a + schichtR(s, ri), 0);
 
 // ── Außenwand KS + WDVS: Gipsputz 1,5 / KS 1800 17,5 / EPS 035 14 / KZ-Putz 1 ──
@@ -73,10 +73,46 @@ pruefe("Inhomogen: oberer Grenzwert R'_T", fmtU(ih.RTOben), '6,40');
 pruefe('Inhomogen: Verhältnis ≤ 1,5', ih.gueltig, true);
 pruefe('Inhomogen: U Steildach', fmtU(1 / ih.RT), '0,16');
 
+// ── Glaser (DIN 4108-3) ──
+pruefe('p_sat(20 °C) = 2337 Pa', Math.round(psat(20)), 2337);
+pruefe('p_sat(−5 °C) = 401 Pa', Math.round(psat(-5)), 401);
+pruefe('p_sat(0 °C) = 610,5 Pa', psat(0), 610.5);
+pruefe('p_sat(12 °C) = 1402 Pa', Math.round(psat(12)), 1402);
+
+const gW = glaser(wand, 'horizontal', false);
+pruefe('KS + WDVS: S_d = 0,15 + 3,5 + 7 + 0,2', fmtR(gW.Sd), '10,850');
+pruefe('KS + WDVS: kein Tauwasser', gW.tauwasser, false);
+pruefe('KS + WDVS: Nachweis erfüllt', gW.ok, true);
+
+// Steildach ohne Dampfbremse (Gefach): Hand: θ_c = −0,45 °C, p_c = 588 Pa,
+// m_c = 2,0e-10·7 776 000·[(1168,5−588,2)/0,325 − (588,2−320,9)/0,3] = 1,391 kg/m²
+dach[1].mu = 1;
+const gD = glaser(dach, 'aufwaerts', true);
+pruefe('Steildach ohne DB: eine Tauwasserebene', gD.ebenen.length, 1);
+pruefe('Steildach ohne DB: Ebene zwischen MW und WF (Grenzfläche 3)', gD.ebenen[0].k, 3);
+pruefe('Steildach ohne DB: θ_c', gD.ebenen[0].theta.toFixed(2), '-0.45');
+pruefe('Steildach ohne DB: p_c', Math.round(gD.ebenen[0].p), 588);
+pruefe('Steildach ohne DB: m_c', fmtR(gD.mc), '1,391');
+pruefe('Steildach ohne DB: m_c > 1,0 → nicht zulässig', gD.ok, false);
+pruefe('Massenbilanz: m_c = Summe der Ebenen', Math.abs(gD.mc - gD.ebenen.reduce((a, e) => a + e.mc, 0)) < 1e-12, true);
+
+const mitDB = [dach[0], dach[1], schicht('Dampfbremse (s_d ≈ 2 m)', 0.02), dach[2], dach[3]];
+const gDB = glaser(mitDB, 'aufwaerts', true);
+pruefe('Dampfbremse: s_d = 10000 · 0,0002 m = 2 m', fmtR(gDB.sd[2]), '2,000');
+pruefe('Steildach mit Dampfbremse: kein Tauwasser', gDB.tauwasser, false);
+
+// Innendämmung ohne Dampfbremse: Tauwasser hinter der Mineralwolle, Verdunstung reicht nicht
+const innen = [schicht('Gipskartonplatte (GKB)', 1.25), schicht('Mineralwolle (MW) 035', 6), schicht('Vollziegel VMz 1800', 24), schicht('Kalkzementputz', 2)];
+const gI = glaser(innen, 'horizontal', false);
+pruefe('Innendämmung: Tauwasser zwischen MW und Ziegel', gI.ebenen.map(e => e.k).join(), '2');
+pruefe('Innendämmung: nicht zulässig', gI.ok, false);
+pruefe('Innendämmung: m_ev < m_c', gI.okEv, false);
+
 // ── Daten ──
 const namen = BAUSTOFFE.flatMap(g => g.stoffe.map(s => s.name));
 pruefe('Baustoffnamen eindeutig', new Set(namen).size, namen.length);
 pruefe('Alle λ > 0', BAUSTOFFE.every(g => g.stoffe.every(s => s.lambda > 0)), true);
+pruefe('Alle μ > 0', BAUSTOFFE.every(g => g.stoffe.every(s => s.mu > 0)), true);
 pruefe('Beispiele nutzen nur vorhandene Baustoffe',
   BEISPIELE.every(b => b.s.every(([typ, stoff]) => typ === 'luft_ruhend' || namen.includes(stoff))), true);
 pruefe('Beispiele nutzen nur vorhandene Bauteile', BEISPIELE.every(b => BAUTEILE.some(x => x.id === b.f.bauteil)), true);

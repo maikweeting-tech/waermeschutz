@@ -97,12 +97,21 @@ const BEISPIELE = [
     ['baustoff', 'EPS (Styropor) 035', '', 14], ['baustoff', 'Kalkzementputz', '', 1] ]},
   { titel: 'Außenwand Porenbeton monolithisch', f: { bauteil: 'aussenwand' }, s: [
     ['baustoff', 'Gipsputz', '', 1], ['baustoff', 'Porenbeton PP 2-0,35', '', 36.5], ['baustoff', 'Kalkzementputz', '', 2] ]},
-  { titel: 'Steildach Zwischensparren (inhomogen)', f: { bauteil: 'steildach', 'inhom-aktiv': true, 'inhom-nr': '3',
+  { titel: 'Steildach Zwischensparren mit Dampfbremse', f: { bauteil: 'steildach', 'inhom-aktiv': true, 'inhom-nr': '4',
+      'inhom-name': 'KVH / BSH (C24)', 'inhom-lambda': '0.13', 'inhom-fa': '0.88', 'inhom-fb': '0.12' }, s: [
+    ['baustoff', 'Gipskartonplatte (GKB)', '', 1.25], ['luft_ruhend', '', 'Installationsebene (ruhende Luft)', 2.5],
+    ['baustoff', 'Dampfbremse (s_d ≈ 2 m)', '', 0.02],
+    ['baustoff', 'Mineralwolle (MW) 035', '', 20], ['baustoff', 'Holzfaserdämmplatte (WF) 045', '', 6] ]},
+  { titel: 'Steildach ohne Dampfbremse (Tauwasser!)', f: { bauteil: 'steildach', 'inhom-aktiv': true, 'inhom-nr': '3',
       'inhom-name': 'KVH / BSH (C24)', 'inhom-lambda': '0.13', 'inhom-fa': '0.88', 'inhom-fb': '0.12' }, s: [
     ['baustoff', 'Gipskartonplatte (GKB)', '', 1.25], ['luft_ruhend', '', 'Installationsebene (ruhende Luft)', 2.5],
     ['baustoff', 'Mineralwolle (MW) 035', '', 20], ['baustoff', 'Holzfaserdämmplatte (WF) 045', '', 6] ]},
   { titel: 'Flachdach Warmdach (PUR/PIR)', f: { bauteil: 'flachdach' }, s: [
-    ['baustoff', 'Stahlbeton (2500)', '', 20], ['baustoff', 'PUR/PIR 024', '', 16] ]},
+    ['baustoff', 'Stahlbeton (2500)', '', 20], ['baustoff', 'Dampfsperre Bitumen mit Alu (s_d ≈ 1500 m)', '', 0.4],
+    ['baustoff', 'PUR/PIR 024', '', 16], ['baustoff', 'Bitumen-Abdichtung (s_d ≈ 300 m)', '', 1] ]},
+  { titel: 'Innendämmung ohne Dampfbremse (Tauwasser!)', f: { bauteil: 'aussenwand' }, s: [
+    ['baustoff', 'Gipskartonplatte (GKB)', '', 1.25], ['baustoff', 'Mineralwolle (MW) 035', '', 6],
+    ['baustoff', 'Vollziegel VMz 1800', '', 24], ['baustoff', 'Kalkzementputz', '', 2] ]},
   { titel: 'Kellerdecke, unterseitig gedämmt', f: { bauteil: 'kellerdecke' }, s: [
     ['baustoff', 'Zementestrich (ZE)', '', 5], ['baustoff', 'EPS (Styropor) 040', '', 3],
     ['baustoff', 'Stahlbeton (2500)', '', 18], ['baustoff', 'Mineralwolle (MW) 035', '', 10] ]},
@@ -110,57 +119,78 @@ const BEISPIELE = [
     ['baustoff', 'Kalkputz', '', 1.5], ['baustoff', 'Vollziegel VMz 1800', '', 24], ['baustoff', 'Kalkzementputz', '', 2] ]},
 ];
 
-// Baustoff-Datenbank mit λ-Bemessungswerten [W/(mK)]
+// Baustoff-Datenbank: λ-Bemessungswert [W/(mK)], Wasserdampf-Diffusionswiderstandszahl μ [–]
+// (ein typischer Wert aus dem Tabellenbereich), bei Bahnen zusätzlich übliche Dicke d [cm].
 // Schneider Bautabellen, 26. Auflage – G (aus dem Gedächtnis, prüfen!)
 const BAUSTOFFE = [
   { gruppe: 'Dämmstoffe', stoffe: [
-    { name: 'Mineralwolle (MW) 035', lambda: 0.035 },
-    { name: 'Mineralwolle (MW) 040', lambda: 0.040 },
-    { name: 'EPS (Styropor) 035', lambda: 0.035 },
-    { name: 'EPS (Styropor) 040', lambda: 0.040 },
-    { name: 'XPS 035', lambda: 0.035 },
-    { name: 'XPS 040', lambda: 0.040 },
-    { name: 'PUR/PIR 024', lambda: 0.024 },
-    { name: 'PUR/PIR 028', lambda: 0.028 },
-    { name: 'Holzfaserdämmplatte (WF) 040', lambda: 0.040 },
-    { name: 'Holzfaserdämmplatte (WF) 045', lambda: 0.045 },
-    { name: 'Zellulose-Einblasdämmung 040', lambda: 0.040 },
-    { name: 'Schaumglas (CG) 050', lambda: 0.050 },
+    { name: 'Mineralwolle (MW) 035', lambda: 0.035, mu: 1 },
+    { name: 'Mineralwolle (MW) 040', lambda: 0.040, mu: 1 },
+    { name: 'EPS (Styropor) 035', lambda: 0.035, mu: 50 },
+    { name: 'EPS (Styropor) 040', lambda: 0.040, mu: 50 },
+    { name: 'XPS 035', lambda: 0.035, mu: 100 },
+    { name: 'XPS 040', lambda: 0.040, mu: 100 },
+    { name: 'PUR/PIR 024', lambda: 0.024, mu: 50 },
+    { name: 'PUR/PIR 028', lambda: 0.028, mu: 50 },
+    { name: 'Holzfaserdämmplatte (WF) 040', lambda: 0.040, mu: 5 },
+    { name: 'Holzfaserdämmplatte (WF) 045', lambda: 0.045, mu: 5 },
+    { name: 'Zellulose-Einblasdämmung 040', lambda: 0.040, mu: 2 },
+    { name: 'Schaumglas (CG) 050', lambda: 0.050, mu: 100000 },
   ]},
   { gruppe: 'Mauerwerk', stoffe: [
-    { name: 'Kalksandstein KS 1800', lambda: 0.99 },
-    { name: 'Kalksandstein KS 2000', lambda: 1.10 },
-    { name: 'Porenbeton PP 2-0,35', lambda: 0.09 },
-    { name: 'Porenbeton PP 4-0,55', lambda: 0.16 },
-    { name: 'Hochlochziegel HLz 12-0,7', lambda: 0.70 },
-    { name: 'Vollziegel VMz 1800', lambda: 0.81 },
-    { name: 'Leichtbetonstein Vbl 800', lambda: 0.39 },
+    { name: 'Kalksandstein KS 1800', lambda: 0.99, mu: 20 },
+    { name: 'Kalksandstein KS 2000', lambda: 1.10, mu: 20 },
+    { name: 'Porenbeton PP 2-0,35', lambda: 0.09, mu: 5 },
+    { name: 'Porenbeton PP 4-0,55', lambda: 0.16, mu: 5 },
+    { name: 'Hochlochziegel HLz 12-0,7', lambda: 0.70, mu: 5 },
+    { name: 'Vollziegel VMz 1800', lambda: 0.81, mu: 10 },
+    { name: 'Leichtbetonstein Vbl 800', lambda: 0.39, mu: 5 },
   ]},
   { gruppe: 'Beton', stoffe: [
-    { name: 'Normalbeton C20/25 (2400)', lambda: 2.10 },
-    { name: 'Stahlbeton (2500)', lambda: 2.30 },
-    { name: 'Leichtbeton 1200', lambda: 0.56 },
-    { name: 'Leichtbeton 1600', lambda: 0.81 },
+    { name: 'Normalbeton C20/25 (2400)', lambda: 2.10, mu: 100 },
+    { name: 'Stahlbeton (2500)', lambda: 2.30, mu: 100 },
+    { name: 'Leichtbeton 1200', lambda: 0.56, mu: 10 },
+    { name: 'Leichtbeton 1600', lambda: 0.81, mu: 15 },
   ]},
   { gruppe: 'Holz / Holzwerkstoffe', stoffe: [
-    { name: 'Nadelholz (Fichte, Kiefer)', lambda: 0.13 },
-    { name: 'KVH / BSH (C24)', lambda: 0.13 },
-    { name: 'Laubholz (Eiche, Buche)', lambda: 0.20 },
-    { name: 'OSB-Platte', lambda: 0.13 },
-    { name: 'Spanplatte', lambda: 0.13 },
-    { name: 'MDF-Platte', lambda: 0.14 },
+    { name: 'Nadelholz (Fichte, Kiefer)', lambda: 0.13, mu: 40 },
+    { name: 'KVH / BSH (C24)', lambda: 0.13, mu: 40 },
+    { name: 'Laubholz (Eiche, Buche)', lambda: 0.20, mu: 50 },
+    { name: 'OSB-Platte', lambda: 0.13, mu: 50 },
+    { name: 'Spanplatte', lambda: 0.13, mu: 50 },
+    { name: 'MDF-Platte', lambda: 0.14, mu: 20 },
   ]},
   { gruppe: 'Putze / Mörtel / Estriche', stoffe: [
-    { name: 'Kalkzementputz', lambda: 1.00 },
-    { name: 'Kalkputz', lambda: 0.87 },
-    { name: 'Gipsputz', lambda: 0.51 },
-    { name: 'Wärmedämmputz (WDP)', lambda: 0.14 },
-    { name: 'Zementestrich (ZE)', lambda: 1.40 },
-    { name: 'Calciumsulfatestrich (CAF)', lambda: 1.20 },
+    { name: 'Kalkzementputz', lambda: 1.00, mu: 20 },
+    { name: 'Kalkputz', lambda: 0.87, mu: 10 },
+    { name: 'Gipsputz', lambda: 0.51, mu: 10 },
+    { name: 'Wärmedämmputz (WDP)', lambda: 0.14, mu: 10 },
+    { name: 'Zementestrich (ZE)', lambda: 1.40, mu: 20 },
+    { name: 'Calciumsulfatestrich (CAF)', lambda: 1.20, mu: 15 },
   ]},
   { gruppe: 'Platten / Bekleidungen', stoffe: [
-    { name: 'Gipskartonplatte (GKB)', lambda: 0.25 },
-    { name: 'Gipsfaserplatte (GF)', lambda: 0.32 },
-    { name: 'Faserzementplatte', lambda: 0.58 },
+    { name: 'Gipskartonplatte (GKB)', lambda: 0.25, mu: 8 },
+    { name: 'Gipsfaserplatte (GF)', lambda: 0.32, mu: 13 },
+    { name: 'Faserzementplatte', lambda: 0.58, mu: 50 },
+  ]},
+  { gruppe: 'Folien / Bahnen', stoffe: [
+    { name: 'PE-Dampfsperre (s_d ≈ 100 m)', lambda: 0.40, mu: 500000, d: 0.02 },
+    { name: 'Dampfbremse (s_d ≈ 2 m)', lambda: 0.20, mu: 10000, d: 0.02 },
+    { name: 'Unterdeckbahn diffusionsoffen (s_d ≈ 0,02 m)', lambda: 0.20, mu: 40, d: 0.05 },
+    { name: 'Dampfsperre Bitumen mit Alu (s_d ≈ 1500 m)', lambda: 0.17, mu: 375000, d: 0.4 },
+    { name: 'Bitumen-Abdichtung (s_d ≈ 300 m)', lambda: 0.17, mu: 30000, d: 1 },
   ]},
 ];
+
+// Feuchteschutz: Glaser-Verfahren nach DIN 4108-3:2018-10, Anhang A – G (prüfen!)
+// Tauperiode 90 Tage: innen 20 °C / 50 %, außen −5 °C / 80 %
+// Verdunstungsperiode 90 Tage: innen 20 °C / 50 %, außen 12 °C / 70 %;
+// Dächer: Außenoberfläche 20 °C. Grenzwerte: m_c ≤ 1,0 kg/m² (0,5 kg/m² an nicht
+// kapillar wasseraufnahmefähigen Schichten), m_ev ≥ m_c.
+const GLASER = {
+  rsi: 0.25, rse: 0.04,
+  tau: { ti: 20, phiI: 0.50, te: -5, phiE: 0.80, stunden: 2160 },
+  verd: { ti: 20, phiI: 0.50, te: 12, phiE: 0.70, teDach: 20, stunden: 2160 },
+  delta0: 2.0e-10,       // Wasserdampf-Diffusionsleitkoeffizient der Luft [kg/(m·s·Pa)]
+  mcMax: 1.0, mcMaxNichtKapillar: 0.5
+};

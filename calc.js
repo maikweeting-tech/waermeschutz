@@ -135,6 +135,65 @@ function pruefeSchimmel(R) {
   return { ...S, R, RT, fRsi, thetaSi, ok: fRsi >= S.fmin };
 }
 
+// ── Feuchteschutz: Glaser-Verfahren (DIN 4108-3) ──────────────
+// Sättigungsdampfdruck [Pa] (Magnus-Formel, DIN 4108-3)
+function psat(theta) {
+  return theta >= 0 ? 610.5 * Math.exp(17.269 * theta / (237.3 + theta))
+                    : 610.5 * Math.exp(21.875 * theta / (265.5 + theta));
+}
+
+// schichten: { d [cm], lambda, mu, typ }, Grenzfläche k = 0 (innen) … n (außen)
+function glaser(schichten, richtung, dach) {
+  const G = GLASER, n = schichten.length;
+  const R = schichten.map(s => schichtR(s, richtung));
+  const sd = schichten.map(s => s.mu * s.d / 100);
+  const x = [0]; sd.forEach(v => x.push(x[x.length-1] + v));
+  const Sd = x[n];
+  const RT = G.rsi + R.reduce((a, v) => a + v, 0) + G.rse;
+  const Rk = [G.rsi]; R.forEach(v => Rk.push(Rk[Rk.length-1] + v));
+  const temp = (ti, te) => Rk.map(r => ti - (ti - te) * r / RT);
+  const sek = h => h * 3600;
+
+  // Tauperiode
+  const T = G.tau;
+  const theta = temp(T.ti, T.te), ps = theta.map(psat);
+  const pi = T.phiI * psat(T.ti), pe = T.phiE * psat(T.te);
+
+  // Gespannter Faden = untere konvexe Hülle von (0|p_i), p_sat der inneren Grenzflächen, (S_d|p_e)
+  const pkt = [{ x: 0, p: pi, k: -1 }];
+  for (let k = 1; k < n; k++) pkt.push({ x: x[k], p: ps[k], k });
+  pkt.push({ x: Sd, p: pe, k: n + 1 });
+  const huelle = [];
+  for (const q of pkt) {
+    while (huelle.length >= 2) {
+      const a = huelle[huelle.length-2], b = huelle[huelle.length-1];
+      if ((b.x - a.x) * (q.p - a.p) - (b.p - a.p) * (q.x - a.x) <= 0) huelle.pop(); else break;
+    }
+    huelle.push(q);
+  }
+  const g = huelle.slice(1).map((b, j) => G.delta0 * (huelle[j].p - b.p) / (b.x - huelle[j].x));
+  const ebenen = huelle.slice(1, -1).map((h, j) => ({ ...h, theta: theta[h.k], mc: (g[j] - g[j+1]) * sek(T.stunden) }));
+  const mc = ebenen.reduce((a, e) => a + e.mc, 0);
+
+  // Verdunstungsperiode (Tauwasserzone von erster bis letzter Ebene)
+  let verd = null, mev = 0;
+  if (ebenen.length) {
+    const V = G.verd;
+    const thetaV = temp(V.ti, dach ? V.teDach : V.te);
+    const piV = V.phiI * psat(V.ti), peV = V.phiE * psat(V.te);
+    const a = ebenen[0], b = ebenen[ebenen.length-1];
+    const pcA = psat(thetaV[a.k]), pcB = psat(thetaV[b.k]);
+    const gI = Math.max(0, G.delta0 * (pcA - piV) / a.x);
+    const gE = Math.max(0, G.delta0 * (pcB - peV) / (Sd - b.x));
+    mev = (gI + gE) * sek(V.stunden);
+    verd = { thetaA: thetaV[a.k], thetaB: thetaV[b.k], pcA, pcB, piV, peV, gI, gE, xA: a.x, xB: b.x, dach };
+  }
+
+  const okMc = mc <= G.mcMax, okEv = mev >= mc;
+  return { n, sd, x, Sd, R, RT, theta, ps, pi, pe, huelle, g, ebenen, mc, mev, verd,
+           tauwasser: ebenen.length > 0, okMc, okEv, ok: !ebenen.length || (okMc && okEv) };
+}
+
 // ── Plausibilitätschecks ──────────────────────────────────────
 function plausChecks(U, bauteilId, schichtenR) {
   const out = [];
