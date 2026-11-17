@@ -1,0 +1,65 @@
+/* Begriffe und Formelzeichen für die i-Erklärungen der Wärmeschutz-App.
+   Nur Bedeutung und Herkunft – bewusst KEINE Tabellenwerte. */
+'use strict';
+const BEGRIFFE = {
+  // Randbedingungen
+  beispiel: { z: '', n: 'Beispiel laden', e: '', t: 'Lädt einen fertigen Schichtaufbau zum Ausprobieren. Danach kannst du alles ändern.' },
+  bauteil: { z: '', n: 'Bauteil', e: '', t: 'Art des Bauteils (Außenwand, Dach, Kellerdecke …). Danach richten sich die Wärmestromrichtung, der Mindestwärmeschutz R_min nach DIN 4108-2 und die Anforderung nach GModG.' },
+  raumnutzung: { z: '', n: 'Raumnutzung', e: '', t: 'Normal beheizt (Innentemperatur ab 19 °C) oder niedrig beheizt (12 bis unter 19 °C). Davon hängen die Anforderungen nach DIN 4108-2 und GModG ab.' },
+  richtung: { z: '', n: 'Wärmestromrichtung', e: '', t: 'Richtung, in der die Wärme durch das Bauteil fließt: horizontal (Wand), aufwärts (Dach, Decke nach oben) oder abwärts (Kellerdecke, Boden). Davon hängen die Wärmeübergangswiderstände R_si und R_se ab.' },
+  theta_i: { z: 'θ_i', n: 'Innentemperatur', e: '°C', t: 'Lufttemperatur innen für den Temperaturverlauf durch das Bauteil. Für den Tauwassernachweis nach Glaser gelten die festen Klimarandbedingungen der DIN 4108-3.' },
+  theta_e: { z: 'θ_e', n: 'Außentemperatur', e: '°C', t: 'Lufttemperatur außen für den Temperaturverlauf durch das Bauteil. Nicht verwechseln mit der Norm-Außentemperatur der Heizlast.' },
+  din: { z: '', n: 'Ausgabe DIN 4108-2', e: '', t: 'Welche Ausgabe der DIN 4108-2 für den Mindestwärmeschutz (R_min) gilt. Das GModG verweist ab 2027 auf die Ausgabe 2026-05.' },
+  gmodg: { z: '', n: 'Anforderung GModG', e: '', t: 'Welche Anforderung des Gebäudemodernisierungsgesetzes geprüft wird: Änderung im Bestand (§ 36 mit Anlage 7, Höchstwert U_max), Neubau (Vergleich mit dem Referenzgebäude nach Anlage 1) oder keine Prüfung.' },
+  anl7: { z: '', n: 'Maßnahme (Anlage 7)', e: '', t: 'Zeile der Anlage 7 zum GModG, die zur Baumaßnahme passt (z. B. Außenwand außen gedämmt). Jede Zeile hat ihren eigenen Höchstwert U_max.' },
+  // Schichtaufbau
+  typ: { z: '', n: 'Typ der Schicht', e: '', t: 'Baustoff (mit λ) oder ruhende Luftschicht. Bei der Luftschicht kommt der Wärmedurchlasswiderstand R aus einer Tabelle nach Dicke und Wärmestromrichtung.' },
+  baustoff: { z: '', n: 'Baustoff', e: '', t: 'Auswahl aus der Baustoffliste (Schneider Bautabellen, mit Tafel als Quelle) oder eigener Name mit eigenem λ. Werte mit „ungeprüft“ sind noch nicht mit der Tabelle abgeglichen.' },
+  d: { z: 'd', n: 'Schichtdicke', e: 'cm', t: 'Dicke der Schicht. In der Rechnung wird in Meter umgerechnet.' },
+  lambda: { z: 'λ', n: 'Bemessungswert der Wärmeleitfähigkeit', e: 'W/(m·K)', t: 'Wie gut der Baustoff Wärme leitet. Je kleiner, desto besser dämmt er. Gerechnet wird mit dem Bemessungswert λ_B; bei Dämmstoffen ist er etwas größer als der Nennwert λ_D auf dem Produkt.' },
+  mu: { z: 'μ', n: 'Wasserdampf-Diffusionswiderstandszahl', e: '–', t: 'Wie stark der Baustoff Wasserdampf bremst, verglichen mit einer gleich dicken Luftschicht. Gebraucht für den Tauwassernachweis. Bei zwei Werten nimmt die App den ungünstigeren.' },
+  quelle: { z: '', n: 'Quelle', e: '', t: 'Woher λ und μ stammen, z. B. Schneider 26 mit Tafel. „ungeprüft“ heißt: Wert noch nicht mit der Tabelle verglichen.' },
+  // Korrekturen
+  korrektur: { z: 'ΔU', n: 'Korrekturwerte', e: 'W/(m²·K)', t: 'Zuschläge auf den U-Wert nach DIN EN ISO 6946 für Luftspalte in der Dämmung (ΔU_g), Befestigungselemente (ΔU_f) und Umkehrdächer (ΔU_r). U = U_0 + ΔU.' },
+  dUg: { z: 'ΔU_g', n: 'Korrektur für Luftspalte', e: 'W/(m²·K)', t: 'Berücksichtigt Spalte und Fugen in der Dämmschicht, durch die Luft zirkulieren kann. Je nach Ausführung Stufe 0, 1 oder 2.' },
+  lustufe: { z: '', n: 'Korrekturstufe Luftspalte', e: '', t: 'Stufe 0: keine Luftspalte (z. B. fugenlos verlegt). Stufe 1 und 2: zunehmend Spalte zwischen Dämmplatten oder zur Konstruktion. Die Beschreibung der Stufen steht bei DIN EN ISO 6946 bzw. in Schneider Tafel 4.6.' },
+  luschicht: { z: '', n: 'Betroffene Dämmschicht', e: '', t: 'Nummer der Schicht im Schichtaufbau, in der die Luftspalte liegen.' },
+  dUf: { z: 'ΔU_f', n: 'Korrektur für Befestigungselemente', e: 'W/(m²·K)', t: 'Berücksichtigt Dübel, Anker oder Schrauben, die die Dämmschicht durchdringen und Wärme leiten. Näherungsverfahren nach Schneider Tafel 4.6a.' },
+  nf: { z: 'n_f', n: 'Anzahl der Befestigungselemente', e: '1/m²', t: 'Wie viele Befestigungselemente je m² Bauteilfläche sitzen.' },
+  df: { z: 'Ø', n: 'Durchmesser des Befestigungselements', e: 'mm', t: 'Durchmesser des Dübels bzw. Ankers. Daraus rechnet die App die Querschnittsfläche A_f.' },
+  lambdaf: { z: 'λ_f', n: 'Wärmeleitfähigkeit des Befestigungselements', e: 'W/(m·K)', t: 'Wärmeleitfähigkeit des Materials, aus dem das Befestigungselement besteht (z. B. Stahl, Edelstahl, Kunststoff).' },
+  voll: { z: 'd₁ = d₀', n: 'Volle Durchdringung', e: '', t: 'Das Befestigungselement geht durch die ganze Dämmschicht (Eindringtiefe d₁ gleich Dämmdicke d₀). Sonst die tatsächliche Eindringtiefe d₁ angeben.' },
+  befschicht: { z: '', n: 'Durchdrungene Schicht', e: '', t: 'Nummer der Dämmschicht, die das Befestigungselement durchdringt.' },
+  dUr: { z: 'ΔU_r', n: 'Korrektur Umkehrdach', e: 'W/(m²·K)', t: 'Beim Umkehrdach liegt die Dämmung über der Abdichtung; Regenwasser kann unter die Dämmung laufen und kühlt. Der Zuschlag hängt vom Anteil des Wärmedurchlasswiderstands unter der Abdichtung ab (DIN 4108-2, Schneider Tafel 4.6b). 0 eintragen, wenn kein Umkehrdach.' },
+  urschicht: { z: '', n: 'Dämmschicht über der Abdichtung', e: '', t: 'Nummer der Dämmschicht, die über der Abdichtung liegt. Dann bestimmt die App ΔU_r selbst aus der Tafel; sonst ΔU_r von Hand eintragen.' },
+  // Inhomogene Schicht
+  inhom: { z: '', n: 'Inhomogene Schicht', e: '', t: 'Eine Schicht aus zwei Materialien nebeneinander, z. B. Sparren und Dämmung im Gefach. R_T wird nach DIN EN ISO 6946 als Mittelwert aus oberem und unterem Grenzwert gerechnet.' },
+  inhomnr: { z: '', n: 'Schicht Nr.', e: '', t: 'Nummer der Schicht im Aufbau, die aus zwei Materialien besteht. Das Material dieser Zeile ist Material A.' },
+  materialB: { z: '', n: 'Material B', e: '', t: 'Das zweite Material in der Schicht, z. B. Holz des Sparrens neben der Dämmung.' },
+  lambdaB: { z: 'λ_B', n: 'Wärmeleitfähigkeit von Material B', e: 'W/(m·K)', t: 'Bemessungswert der Wärmeleitfähigkeit des zweiten Materials.' },
+  fa: { z: 'f_a', n: 'Flächenanteil Material A', e: '–', t: 'Anteil der Fläche, den Material A einnimmt, z. B. Gefachbreite geteilt durch Achsabstand. f_a + f_b = 1.' },
+  fb: { z: 'f_b', n: 'Flächenanteil Material B', e: '–', t: 'Anteil der Fläche, den Material B einnimmt, z. B. Sparrenbreite geteilt durch Achsabstand.' },
+  // Ergebnisse
+  R: { z: 'R', n: 'Wärmedurchlasswiderstand', e: 'm²·K/W', t: 'Wie stark eine Schicht den Wärmestrom bremst: R = d / λ (d in m). Je größer, desto besser.' },
+  Rsi: { z: 'R_si', n: 'Wärmeübergangswiderstand innen', e: 'm²·K/W', t: 'Widerstand beim Übergang der Wärme von der Raumluft an die innere Oberfläche. Hängt von der Wärmestromrichtung ab (DIN EN ISO 6946).' },
+  Rse: { z: 'R_se', n: 'Wärmeübergangswiderstand außen', e: 'm²·K/W', t: 'Widerstand beim Übergang der Wärme von der äußeren Oberfläche an die Außenluft (DIN EN ISO 6946).' },
+  RT: { z: 'R_T', n: 'Wärmedurchgangswiderstand', e: 'm²·K/W', t: 'Gesamtwiderstand des Bauteils von Luft zu Luft: R_T = R_si + Σ R + R_se.' },
+  U0: { z: 'U_0', n: 'U-Wert ohne Korrekturen', e: 'W/(m²·K)', t: 'U_0 = 1 / R_T, noch ohne die Korrekturwerte ΔU.' },
+  U: { z: 'U', n: 'Wärmedurchgangskoeffizient (U-Wert)', e: 'W/(m²·K)', t: 'Wärmestrom durch 1 m² Bauteil bei 1 K Temperaturunterschied: U = U_0 + ΔU. Je kleiner, desto besser gedämmt. Diesen Wert übernimmt die Heizlast-App.' },
+  temp: { z: 'θ', n: 'Temperaturverlauf', e: '°C', t: 'Temperatur an jeder Schichtgrenze. Der Temperaturabfall in einer Schicht ist proportional zu ihrem R: Δθ_Schicht = R / R_T · (θ_i − θ_e).' },
+  thetasi: { z: 'θ_si', n: 'Oberflächentemperatur innen', e: '°C', t: 'Temperatur der inneren Bauteiloberfläche. Ist sie zu niedrig, droht Schimmel oder Tauwasser an der Oberfläche.' },
+  Rmin: { z: 'R_min', n: 'Mindest-Wärmedurchlasswiderstand', e: 'm²·K/W', t: 'Kleinster zulässiger Wärmedurchlasswiderstand des Bauteils nach DIN 4108-2 (Mindestwärmeschutz). Nachweis: R_vorh ≥ R_min.' },
+  nachweis: { z: 'η', n: 'Ausnutzungsgrad', e: '–', t: 'η = E_d / R_d (Anforderung durch Vorhandenes). Erfüllt, wenn η ≤ 1,0.' },
+  Umax: { z: 'U_max', n: 'Höchstwert des U-Werts (GModG)', e: 'W/(m²·K)', t: 'Größter zulässiger U-Wert bei Änderung eines Bauteils im Bestand nach § 36 mit Anlage 7 des GModG.' },
+  URef: { z: 'U_Ref', n: 'U-Wert des Referenzgebäudes', e: 'W/(m²·K)', t: 'U-Wert des Referenzgebäudes nach Anlage 1 GModG. Beim Neubau nur ein Vergleich zur Orientierung – der eigentliche Nachweis läuft über den Primärenergiebedarf.' },
+  schimmel: { z: 'θ_si,min', n: 'Schimmelpilzschwelle', e: '°C', t: 'Mindesttemperatur der inneren Oberfläche, damit sich dort kein Schimmel bildet (DIN 4108-2). Der Nachweis vergleicht θ_si mit dieser Schwelle.' },
+  fRsi: { z: 'f_Rsi', n: 'Temperaturfaktor', e: '–', t: 'f_Rsi = (θ_si − θ_e) / (θ_i − θ_e). Dimensionsloses Maß für die Oberflächentemperatur, unabhängig vom jeweiligen Klima.' },
+  glaser: { z: '', n: 'Glaser-Verfahren', e: '', t: 'Rechenverfahren der DIN 4108-3: Mit festen Klimarandbedingungen wird geprüft, ob und wie viel Wasserdampf im Bauteil kondensiert (Tauperiode) und ob es im Sommer wieder austrocknet (Verdunstungsperiode).' },
+  sd: { z: 's_d', n: 'wasserdampfdiffusionsäquivalente Luftschichtdicke', e: 'm', t: 's_d = μ · d. So dick müsste eine Luftschicht sein, um Wasserdampf genauso stark zu bremsen wie die Schicht.' },
+  psat: { z: 'p_sat', n: 'Sättigungsdampfdruck', e: 'Pa', t: 'Höchster Wasserdampfdruck, den Luft bei der jeweiligen Temperatur aufnehmen kann. Wird er erreicht, fällt Tauwasser aus.' },
+  Mc: { z: 'M_c', n: 'Tauwassermasse', e: 'kg/m²', t: 'Wassermenge, die sich in der Tauperiode im Bauteil sammelt. Muss unter dem Grenzwert der DIN 4108-3 bleiben und im Sommer wieder verdunsten.' },
+  Mev: { z: 'M_ev', n: 'Verdunstungsmasse', e: 'kg/m²', t: 'Wassermenge, die in der Verdunstungsperiode wieder austrocknen kann. Nachweis: M_ev ≥ M_c.' },
+  plaus: { z: '', n: 'Plausibilitätscheck', e: '', t: 'Prüft, ob der U-Wert im typischen Bereich für das Bauteil liegt, und zeigt die Schicht mit dem größten Widerstand. Kein Normnachweis, nur eine Kontrolle gegen Tippfehler.' },
+  heizlast: { z: '', n: 'An Heizlast-App übergeben', e: '', t: 'Legt das Bauteil mit Name, Bauteilart, U-Wert und Quelle für die Heizlast-App ab. Schichten ohne belegte Quelle werden mitgemeldet und müssen dort als geprüft abgehakt werden.' }
+};
+if (typeof module !== 'undefined') module.exports = { BEGRIFFE };

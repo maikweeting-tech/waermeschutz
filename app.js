@@ -18,8 +18,47 @@ function toast(msg) {
   el._t = setTimeout(() => el.classList.remove('zeigen'), 3500);
 }
 
+// ── i-Erklärungen (BEGRIFFE in begriffe.js) ───────────────────
+const idxI = h => String(h).replace(/([A-Za-zΦθφηρεΔλμ\u0307])_([A-Za-z0-9äöü]+(?:,[A-Za-z0-9]+)?)/g, '$1<sub>$2</sub>');
+const escI = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+function info(k) {
+  const b = typeof BEGRIFFE === 'object' && BEGRIFFE[k]; if (!b) return '';
+  return `<span class="info no-print" role="button" tabindex="0" data-info="${k}" aria-label="Erklärung: ${escI(b.n)}" title="${escI(b.n)}">i</span>`;
+}
+function infoPlatzhalter(root) { root.querySelectorAll('span[data-i]').forEach(el => { el.outerHTML = info(el.dataset.i); }); }
+function zeigeInfo(el) {
+  const b = BEGRIFFE[el.dataset.info]; if (!b) return;
+  let box = $('infobox');
+  if (box && box._von === el && !box.hidden) { schliesseInfo(); return; }
+  if (!box) { box = document.createElement('div'); box.id = 'infobox'; box.setAttribute('role', 'dialog'); document.body.appendChild(box); }
+  box._von = el;
+  box.innerHTML = `<button type="button" class="info-zu" aria-label="Schließen">×</button>
+    <div class="info-kopf">${b.z ? `<span class="info-zeichen">${idxI(escI(b.z))}</span>` : ''}<b>${escI(b.n)}</b>${b.e ? `<span class="info-einh">in ${escI(b.e)}</span>` : ''}</div>
+    <p>${idxI(escI(b.t))}</p>`;
+  box.hidden = false;
+  const r = el.getBoundingClientRect(), bw = Math.min(340, document.documentElement.clientWidth - 24);
+  box.style.width = bw + 'px';
+  box.style.left = Math.max(12, Math.min(r.left + r.width / 2 - bw / 2, document.documentElement.clientWidth - bw - 12)) + 'px';
+  const unten = r.bottom + 8, h = box.offsetHeight;
+  box.style.top = (unten + h > window.innerHeight - 8 && r.top - h - 8 > 8 ? r.top - h - 8 : unten) + 'px';
+}
+function schliesseInfo() { const box = $('infobox'); if (box) { box.hidden = true; box._von = null; } }
+document.addEventListener('click', e => {
+  const i = e.target.closest && e.target.closest('[data-info]');
+  if (i) { e.preventDefault(); e.stopPropagation(); zeigeInfo(i); return; }
+  if (!e.target.closest || e.target.closest('.info-zu') || !e.target.closest('#infobox')) schliesseInfo();
+}, true);
+document.addEventListener('keydown', e => {
+  const i = e.target.closest && e.target.closest('[data-info]');
+  if (i && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); zeigeInfo(i); }
+  if (e.key === 'Escape') schliesseInfo();
+});
+window.addEventListener('scroll', schliesseInfo, { passive: true });
+window.addEventListener('resize', schliesseInfo);
+
 // ── Initialisierung ───────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
+  infoPlatzhalter(document);
   // Bauteil-Select befüllen
   const sel = $('bauteil');
   BAUTEILE.forEach(b => { const o = document.createElement('option'); o.value = b.id; o.textContent = b.label; sel.appendChild(o); });
@@ -559,9 +598,9 @@ function htmlSchichttabelle(e) {
     rows += `<tr><td class="zahl">${i+1}</td><td>${name}</td><td class="zahl mono">${dM}</td><td class="zahl mono">${lam}</td><td class="zahl mono">${fmtR(s.R)}</td><td class="klein">${esc(s.quelle)}</td></tr>`;
   });
   return `<div class="karte">
-    <p class="erg-titel">1 – Schichttabelle</p>
+    <p class="erg-titel">1 – Schichttabelle ${info('R')}</p>
     <div class="tabwrap"><table class="tab">
-      <thead><tr><th class="zahl">Nr.</th><th>Baustoff</th><th class="zahl">d [m]</th><th class="zahl">λ [W/(mK)]</th><th class="zahl">R [m²K/W]</th><th>Quelle λ</th></tr></thead>
+      <thead><tr><th class="zahl">Nr.</th><th>Baustoff</th><th class="zahl">d [m]</th><th class="zahl">λ [W/(mK)]</th><th class="zahl">R ${info('R')} [m²K/W]</th><th>Quelle λ ${info('quelle')}</th></tr></thead>
       <tbody>${rows}</tbody>
     </table></div>
   </div>`;
@@ -625,7 +664,7 @@ function htmlRechenweg(e) {
 
   // Großes Ergebnis
   rw += `<div class="ergebnis-gross">${fmtU(e.U)} <small>W/(m²K)</small></div>`;
-  return `<div class="karte"><p class="erg-titel">2 – Rechenweg U-Wert</p>${rw}</div>`;
+  return `<div class="karte"><p class="erg-titel">2 – Rechenweg U-Wert ${info('Rsi')}${info('Rse')}${info('RT')}${info('U0')}${info('U')}</p>${rw}</div>`;
 }
 
 // 3 – Temperaturtabelle
@@ -637,7 +676,7 @@ function htmlTemperatur(e) {
     rows += `<tr${cls}><td>${esc(p.stelle)}</td><td class="zahl mono">${fmtR(p.sR)}</td><td class="zahl mono">${fmtT(p.theta)}</td></tr>`;
   });
   return `<div class="karte">
-    <p class="erg-titel">3 – Temperaturverlauf</p>
+    <p class="erg-titel">3 – Temperaturverlauf ${info('temp')}${info('thetasi')}</p>
     <div class="massstab no-print" role="group" aria-label="Maßstab der Grafik">
       <button type="button" class="btn btn-klein" data-massstab="d" aria-pressed="${_massstab === 'd'}">Maßstab Dicke d</button>
       <button type="button" class="btn btn-klein" data-massstab="R" aria-pressed="${_massstab === 'R'}">Maßstab R</button>
@@ -653,14 +692,14 @@ function htmlTemperatur(e) {
 
 // 4 – Nachweistabelle Mindestwärmeschutz
 function htmlNachweis(e) {
-  if (!e.minErg) return `<div class="karte"><p class="erg-titel">4 – Mindestwärmeschutz</p><p class="hinweis">Kein R<sub>min</sub>-Wert für diesen Bauteiltyp hinterlegt.</p></div>`;
+  if (!e.minErg) return `<div class="karte"><p class="erg-titel">4 – Mindestwärmeschutz ${info('Rmin')}</p><p class="hinweis">Kein R<sub>min</sub>-Wert für diesen Bauteiltyp hinterlegt.</p></div>`;
 
   const m = e.minErg;
   const cls = m.ok ? 'ok' : 'nok';
   const sym = m.ok ? '✓' : '✗';
 
   return `<div class="karte">
-    <p class="erg-titel">4 – Mindestwärmeschutz nach DIN 4108-2:${esc(m.din)}</p>
+    <p class="erg-titel">4 – Mindestwärmeschutz nach DIN 4108-2:${esc(m.din)} ${info('Rmin')}${info('nachweis')}</p>
     <div class="tabwrap"><table class="tab">
       <thead><tr><th>Nachweis</th><th class="zahl">E<sub>d</sub> (R<sub>min</sub>)</th><th class="zahl">R<sub>d</sub> (R<sub>vorh</sub>)</th><th class="zahl">η</th><th>erfüllt</th></tr></thead>
       <tbody><tr>
@@ -692,7 +731,7 @@ function htmlGModG(e) {
 
   if (g.fall === 'neubau') {
     return `<div class="karte">
-      <p class="erg-titel">5 – GModG Neubau: Vergleich mit dem Referenzgebäude (Anlage 1)</p>
+      <p class="erg-titel">5 – GModG Neubau: Vergleich mit dem Referenzgebäude (Anlage 1) ${info('URef')}</p>
       <div class="rechenweg">${uZeile}
 U<sub>Ref</sub> = ${fmtU(g.umax)} W/(m²K) – ${esc(g.text)}
 U ${g.ok ? '≤' : '>'} U<sub>Ref</sub> → <span class="erg">${g.ok ? 'besser als oder gleich dem Referenzbauteil' : 'schlechter als das Referenzbauteil'}</span></div>
@@ -708,7 +747,7 @@ U ${g.ok ? '≤' : '>'} U<sub>Ref</sub> → <span class="erg">${g.ok ? 'besser a
     ? `${uZeile}\nAnlage 7, Nr. ${z.id}, Zonen ${g.zone}: <span class="erg">keine Anforderung</span>`
     : `${uZeile}\nU<sub>max</sub> = ${fmtU(g.umax)} W/(m²K) (Anlage 7, Nr. ${z.id}, Zonen ${g.zone})\nU = ${fmtU(g.Ur)} ${g.ok ? '≤' : '>'} U<sub>max</sub> = ${fmtU(g.umax)} → <span class="erg">${g.ok ? 'erfüllt' : 'NICHT erfüllt'}</span>`;
   return `<div class="karte">
-    <p class="erg-titel">5 – GModG: Änderung im Bestand (§ 36 mit Anlage 7)</p>
+    <p class="erg-titel">5 – GModG: Änderung im Bestand (§ 36 mit Anlage 7) ${info('Umax')}</p>
     <p><strong>Nr. ${z.id}:</strong> ${esc(z.text)}</p>
     <div class="rechenweg">${rw}</div>
     <div class="ampel ${cls}" style="margin-top:12px"><div class="licht">${sym}</div><div>Anforderung GModG ${g.keineAnforderung ? 'entfällt' : g.ok ? 'erfüllt' : 'NICHT erfüllt'}<br><small>${g.keineAnforderung ? 'für Zonen ' + g.zone + ' keine Anforderung' : `U = ${fmtU(g.Ur)} ${g.ok ? '≤' : '>'} U<sub>max</sub> = ${fmtU(g.umax)} W/(m²K)`}</small></div></div>
@@ -740,7 +779,7 @@ R<sub>T</sub> = R<sub>si</sub> + R + R<sub>se</sub> = ${fmtR(m.rsi)} + ${fmtR(m.
 erf R = R<sub>si</sub> · (θ<sub>i</sub> − θ<sub>e</sub>) / (θ<sub>i</sub> − θ<sub>s</sub>) − (R<sub>si</sub> + R<sub>se</sub>) = ${fmtR(m.rsi)} · ${fmtT(m.ti - m.te)} / ${fmtT(m.ti - m.thetaMin)} − ${fmtR(m.rsi + m.rse)} = ${fmtR(m.erfR)} m²K/W → R = ${fmtR(m.R)} ${vgl} erf R
 erf U = (1 / R<sub>si</sub>) · (θ<sub>i</sub> − θ<sub>s</sub>) / (θ<sub>i</sub> − θ<sub>e</sub>) = ${fmtR(m.erfU)} W/(m²K)   (Temperaturfaktor f<sub>Rsi</sub> = ${fmtR(m.fRsi)})`;
   return `<div class="karte">
-    <p class="erg-titel">6 – Schimmelnachweis (Schimmelpilzschwelle θ<sub>si,min</sub>)</p>
+    <p class="erg-titel">6 – Schimmelnachweis (Schimmelpilzschwelle θ<sub>si,min</sub>) ${info('schimmel')}${info('fRsi')}</p>
     <p class="hinweis">Randbedingungen: θ<sub>i</sub> = ${fmtT(m.ti)} °C, φ<sub>i</sub> = ${m.phi} %, θ<sub>e</sub> = ${fmtT(m.te)} °C, R<sub>si</sub> = ${fmtR(m.rsi)}, R<sub>se</sub> = ${fmtR(m.rse)} m²K/W (beheizte Räume). Unabhängig von θ<sub>i</sub>/θ<sub>e</sub> oben.</p>
     <div class="rechenweg">${rw}</div>
     <div class="ampel ${cls}" style="margin-top:12px">
@@ -759,7 +798,7 @@ function htmlPlaus(e) {
   e.plaus.forEach(p => {
     items += `<div class="check-item"><div class="check-dot ${p.ok ? 'ok' : 'warn'}"></div><div>${esc(p.text)}<br><span class="klein hinweis">${esc(p.hinweis)}</span></div></div>`;
   });
-  return `<div class="karte"><p class="erg-titel">8 – Plausibilitätscheck</p>${items}</div>`;
+  return `<div class="karte"><p class="erg-titel">8 – Plausibilitätscheck ${info('plaus')}</p>${items}</div>`;
 }
 
 // 6 – Feuchteschutz: Glaser-Verfahren
@@ -770,7 +809,7 @@ const fmtG = v => (v * 3600 * 1000).toFixed(3).replace('.', ',');   // kg/(m²s)
 
 function htmlGlaser(e) {
   const F = e.feuchte, G = GLASER, T = G.tau, V = G.verd;
-  const titel = '<p class="erg-titel">7 – Feuchteschutz: Tauwasser im Bauteil (Glaser-Verfahren, DIN 4108-3)</p>';
+  const titel = `<p class="erg-titel">7 – Feuchteschutz: Tauwasser im Bauteil (Glaser-Verfahren, DIN 4108-3) ${info('glaser')}${info('Mc')}${info('Mev')}</p>`;
   if (F.muFehlt) return `<div class="karte">${titel}<p class="hinweis">Für den Tauwassernachweis fehlt μ bei: ${F.muFehlt.map(esc).join(', ')}.</p></div>`;
 
   const name = k => esc(F.schichten[k].name || 'Schicht ' + (k+1));
@@ -846,7 +885,7 @@ M<sub>ev</sub> = δ<sub>0</sub> · ((p<sub>c</sub> − p<sub>i</sub>) / s<sub>d,
     </div>
     <div id="glaser-box">${glaserSVG(F, _glaserMassstab)}</div>
     <div class="tabwrap"><table class="tab">
-      <thead><tr><th class="zahl">Nr.</th><th>Schicht</th><th class="zahl">d [m]</th><th class="zahl">μ [–]</th><th class="zahl">s<sub>d</sub> [m]</th><th class="zahl">Σs<sub>d</sub> [m]</th><th class="zahl">θ [°C]</th><th class="zahl">p<sub>sat</sub> [Pa]</th></tr></thead>
+      <thead><tr><th class="zahl">Nr.</th><th>Schicht</th><th class="zahl">d [m]</th><th class="zahl">μ [–]</th><th class="zahl">s<sub>d</sub> ${info('sd')} [m]</th><th class="zahl">Σs<sub>d</sub> [m]</th><th class="zahl">θ [°C]</th><th class="zahl">p<sub>sat</sub> ${info('psat')} [Pa]</th></tr></thead>
       <tbody>${zeilen}</tbody>
     </table></div>
     <p class="hinweis klein">θ und p<sub>sat</sub> jeweils an der äußeren Grenzfläche der Schicht (Tauperiode).</p>

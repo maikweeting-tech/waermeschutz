@@ -25,13 +25,13 @@
   <!-- ── Aufgabe ──────────────────────────────── -->
   <section class="karte no-print">
     <div class="aufgabe">
-      <label class="feld">Beispiel laden
+      <label class="feld">Beispiel laden <span data-i="beispiel"></span>
         <select id="beispiel"><option value="">— Beispielaufbau wählen —</option></select>
       </label>
       <div class="aufgabe-knoepfe">
         <button type="button" class="btn btn-klein" id="btn-link">Link teilen</button>
         <button type="button" class="btn btn-klein" id="btn-druck">Drucken / PDF</button>
-        <button type="button" class="btn btn-klein" id="btn-heizlast">An Heizlast-App übergeben</button>
+        <button type="button" class="btn btn-klein" id="btn-heizlast">An Heizlast-App übergeben</button> <span data-i="heizlast"></span>
       </div>
     </div>
     <p class="hinweis klein">„Link teilen“ kopiert einen Link mit allen Eingaben – z.B. als Aufgabe für die Klasse. „An Heizlast-App übergeben“ speichert das Bauteil mit U-Wert für die Heizlast-App und lädt es zusätzlich als JSON-Datei herunter.</p>
@@ -41,14 +41,14 @@
   <section class="karte">
     <h2>Randbedingungen</h2>
     <div class="reihe drei">
-      <label class="feld">Bauteil<select id="bauteil"></select></label>
-      <label class="feld">Raumnutzung
+      <label class="feld">Bauteil <span data-i="bauteil"></span><select id="bauteil"></select></label>
+      <label class="feld">Raumnutzung <span data-i="raumnutzung"></span>
         <select id="raum">
           <option value="normal">Normal beheizt (θ_i ≥ 19 °C)</option>
           <option value="niedrig">Niedrig beheizt (12…19 °C)</option>
         </select>
       </label>
-      <label class="feld">Wärmestromrichtung
+      <label class="feld">Wärmestromrichtung <span data-i="richtung"></span>
         <select id="richtung">
           <option value="horizontal">horizontal</option>
           <option value="aufwaerts">aufwärts</option>
@@ -57,13 +57,13 @@
       </label>
     </div>
     <div class="reihe drei">
-      <label class="feld">θ<sub>i</sub> <span class="einheit-label">[°C]</span>
+      <label class="feld">θ<sub>i</sub> <span data-i="theta_i"></span> <span class="einheit-label">[°C]</span>
         <input type="number" id="theta-i" value="20" step="any">
       </label>
-      <label class="feld">θ<sub>e</sub> <span class="einheit-label">[°C]</span>
+      <label class="feld">θ<sub>e</sub> <span data-i="theta_e"></span> <span class="einheit-label">[°C]</span>
         <input type="number" id="theta-e" value="-5" step="any">
       </label>
-      <label class="feld">DIN 4108-2
+      <label class="feld">DIN 4108-2 <span data-i="din"></span>
         <select id="din-ausgabe">
           <option value="2013-02">2013-02</option>
           <option value="2026-05">2026-05</option>
@@ -71,14 +71,14 @@
       </label>
     </div>
     <div class="reihe">
-      <label class="feld">Anforderung GModG
+      <label class="feld">Anforderung GModG <span data-i="gmodg"></span>
         <select id="gmodg-fall">
           <option value="bestand">Änderung im Bestand (§ 36, Anlage 7)</option>
           <option value="neubau">Neubau (Orientierung: Referenzgebäude, Anlage 1)</option>
           <option value="keine">keine Prüfung</option>
         </select>
       </label>
-      <label class="feld" id="gmodg-zeile-feld">Maßnahme (Anlage 7)
+      <label class="feld" id="gmodg-zeile-feld">Maßnahme (Anlage 7) <span data-i="anl7"></span>
         <select id="gmodg-zeile"></select>
       </label>
     </div>
@@ -91,12 +91,12 @@
       <table class="tab" id="tab-schichten">
         <thead><tr>
           <th class="zahl">Nr.</th>
-          <th>Typ</th>
-          <th>Baustoff</th>
-          <th class="zahl">d [cm]</th>
-          <th class="zahl">λ [W/(mK)]</th>
-          <th class="zahl">μ [–]</th>
-          <th>Quelle</th>
+          <th>Typ <span data-i="typ"></span></th>
+          <th>Baustoff <span data-i="baustoff"></span></th>
+          <th class="zahl">d <span data-i="d"></span> [cm]</th>
+          <th class="zahl">λ <span data-i="lambda"></span> [W/(mK)]</th>
+          <th class="zahl">μ <span data-i="mu"></span> [–]</th>
+          <th>Quelle <span data-i="quelle"></span></th>
           <th></th>
         </tr></thead>
         <tbody id="schichten"></tbody>
@@ -108,40 +108,40 @@
   <!-- ── Korrekturwerte ───────────────────────── -->
   <section class="karte">
     <details class="extra" id="det-korr">
-      <summary>Korrekturwerte ΔU</summary>
+      <summary>Korrekturwerte ΔU <span data-i="korrektur"></span></summary>
       <div class="inhalt">
 
-        <h3>Luftspalte in der Dämmung (ΔU<sub>g</sub>)</h3>
+        <h3>Luftspalte in der Dämmung (ΔU<sub>g</sub>) <span data-i="dUg"></span></h3>
         <div class="reihe">
-          <label class="feld">Korrekturstufe
+          <label class="feld">Korrekturstufe <span data-i="lustufe"></span>
             <select id="lu-stufe">
               <option value="0" selected>Stufe 0 – keine Korrektur</option>
               <option value="1">Stufe 1 – ΔU″ = 0,01</option>
               <option value="2">Stufe 2 – ΔU″ = 0,04</option>
             </select>
           </label>
-          <label class="feld">Betroffene Dämmschicht Nr.
+          <label class="feld">Betroffene Dämmschicht Nr. <span data-i="luschicht"></span>
             <input type="number" id="lu-schicht" min="1" step="1" placeholder="z.B. 2">
           </label>
         </div>
 
-        <h3 style="margin-top:18px">Befestigungselemente (ΔU<sub>f</sub>)</h3>
+        <h3 style="margin-top:18px">Befestigungselemente (ΔU<sub>f</sub>) <span data-i="dUf"></span></h3>
         <label class="schalter"><input type="checkbox" id="bef-aktiv"> Befestigungselemente vorhanden</label>
         <div id="bef-felder" hidden>
           <div class="reihe drei">
-            <label class="feld">n<sub>f</sub> <span class="einheit-label">[1/m²]</span>
+            <label class="feld">n<sub>f</sub> <span data-i="nf"></span> <span class="einheit-label">[1/m²]</span>
               <input type="number" id="bef-nf" step="any" min="0">
             </label>
-            <label class="feld">Ø <span class="einheit-label">[mm]</span>
+            <label class="feld">Ø <span data-i="df"></span> <span class="einheit-label">[mm]</span>
               <input type="number" id="bef-dm" step="any" min="0">
             </label>
-            <label class="feld">λ<sub>f</sub> <span class="einheit-label">[W/(mK)]</span>
+            <label class="feld">λ<sub>f</sub> <span data-i="lambdaf"></span> <span class="einheit-label">[W/(mK)]</span>
               <input type="number" id="bef-lambda" step="any" min="0">
             </label>
           </div>
           <div class="reihe drei">
-            <label class="schalter"><input type="checkbox" id="bef-voll" checked> Volle Durchdringung (d₁ = d₀)</label>
-            <label class="feld">Durchdrungene Schicht Nr.
+            <label class="schalter"><input type="checkbox" id="bef-voll" checked> Volle Durchdringung (d₁ = d₀) <span data-i="voll"></span></label>
+            <label class="feld">Durchdrungene Schicht Nr. <span data-i="befschicht"></span>
               <input type="number" id="bef-schicht" min="1" step="1" placeholder="z.B. 2">
             </label>
             <label class="feld" id="bef-d1-feld" hidden>Eindringtiefe d₁ <span class="einheit-label">[cm]</span>
@@ -151,12 +151,12 @@
           <p class="hinweis klein">Näherungsverfahren nach Schneider 26, Tafel 4.6a: ΔU<sub>f</sub> = α·λ<sub>f</sub>·n<sub>f</sub>·A<sub>f</sub>/d₀ · (R₁/R<sub>T,h</sub>)² mit α = 0,8·d₁/d₀.</p>
         </div>
 
-        <h3 style="margin-top:18px">Umkehrdach (ΔU<sub>r</sub>)</h3>
+        <h3 style="margin-top:18px">Umkehrdach (ΔU<sub>r</sub>) <span data-i="dUr"></span></h3>
         <div class="reihe">
-          <label class="feld">Dämmschicht über der Abdichtung Nr.
+          <label class="feld">Dämmschicht über der Abdichtung Nr. <span data-i="urschicht"></span>
             <input type="number" id="ur-schicht" min="1" step="1" placeholder="leer = manuell">
           </label>
-          <label class="feld">oder ΔU<sub>r</sub> manuell <span class="einheit-label">[W/(m²K)]</span>
+          <label class="feld">oder ΔU<sub>r</sub> manuell <span data-i="dUr"></span> <span class="einheit-label">[W/(m²K)]</span>
             <input type="number" id="delta-ur" value="0" step="any" min="0">
           </label>
         </div>
@@ -168,26 +168,26 @@
   <!-- ── Inhomogene Schicht ───────────────────── -->
   <section class="karte">
     <details class="extra" id="det-inhom">
-      <summary>Inhomogene Schicht (z.B. Sparren / Gefach)</summary>
+      <summary>Inhomogene Schicht (z.B. Sparren / Gefach) <span data-i="inhom"></span></summary>
       <div class="inhalt">
         <label class="schalter"><input type="checkbox" id="inhom-aktiv"> Inhomogene Schicht vorhanden</label>
         <div id="inhom-felder" hidden>
           <div class="reihe">
-            <label class="feld">Schicht Nr.
+            <label class="feld">Schicht Nr. <span data-i="inhomnr"></span>
               <input type="number" id="inhom-nr" min="1" step="1">
             </label>
-            <label class="feld">Material B
+            <label class="feld">Material B <span data-i="materialB"></span>
               <input type="text" id="inhom-name" placeholder="z.B. KVH C24">
             </label>
           </div>
           <div class="reihe drei">
-            <label class="feld">λ<sub>B</sub> <span class="einheit-label">[W/(mK)]</span>
+            <label class="feld">λ<sub>B</sub> <span data-i="lambdaB"></span> <span class="einheit-label">[W/(mK)]</span>
               <input type="number" id="inhom-lambda" step="any" min="0">
             </label>
-            <label class="feld">f<sub>a</sub> <span class="einheit-label">(Anteil A)</span>
+            <label class="feld">f<sub>a</sub> <span data-i="fa"></span> <span class="einheit-label">(Anteil A)</span>
               <input type="number" id="inhom-fa" step="any" min="0" max="1" placeholder="0,88">
             </label>
-            <label class="feld">f<sub>b</sub> <span class="einheit-label">(Anteil B)</span>
+            <label class="feld">f<sub>b</sub> <span data-i="fb"></span> <span class="einheit-label">(Anteil B)</span>
               <input type="number" id="inhom-fb" step="any" min="0" max="1" placeholder="0,12">
             </label>
           </div>
@@ -209,6 +209,7 @@
 
 <script src="data.js"></script>
 <script src="calc.js"></script>
+<script src="begriffe.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

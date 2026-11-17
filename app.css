@@ -205,3 +205,18 @@ svg.grafik { width: 100%; height: auto; display: block; margin-bottom: 12px; fon
 .eingebettet .topbar, .eingebettet #btn-link, .eingebettet .aufgabe ~ .hinweis { display: none !important; }
 .eingebettet main { padding-top: 4px; }
 .eingebettet .fehlt { border-color: var(--rot) !important; background: var(--rot-hell) !important; }
+
+/* i-Erklärungen */
+.info { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; margin: 0 2px; border-radius: 50%;
+  background: var(--blau-hell); color: var(--blau); border: 1px solid var(--linie); font: italic 700 12px/1 Georgia, "Times New Roman", serif;
+  cursor: pointer; vertical-align: middle; flex: none; text-transform: none; letter-spacing: 0; position: relative; }
+.info::after { content: ""; position: absolute; inset: -10px; }
+.info:hover, .info:focus-visible { background: var(--rost); border-color: var(--rost); color: #fff; outline: none; }
+#infobox { position: fixed; z-index: 60; background: var(--flaeche); color: var(--text); border: 1px solid var(--linie); border-left: 4px solid var(--rost);
+  border-radius: 10px; box-shadow: 0 8px 28px rgba(0,0,0,.22); padding: 12px 34px 12px 14px; font-size: .92rem; line-height: 1.45; font-weight: 400; text-transform: none; letter-spacing: 0; }
+#infobox p { margin: 6px 0 0; }
+#infobox .info-kopf { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+#infobox .info-zeichen { font-family: var(--mono); font-weight: 700; color: var(--rost); font-size: 1.05rem; }
+#infobox .info-einh { color: var(--text2); font-size: .85rem; }
+#infobox .info-zu { position: absolute; top: 4px; right: 4px; width: 30px; height: 30px; border: 0; background: transparent; color: var(--text2); font-size: 1.3rem; cursor: pointer; border-radius: 6px; }
+@media print { .info, #infobox { display: none !important; } }

@@ -1,7 +1,7 @@
 /* Prüfungen des Rechenkerns – Sollwerte von Hand gerechnet. Aufruf: node tests.js */
 'use strict';
 const fs = require('fs'), path = require('path'), vm = require('vm');
-for (const f of ['data.js', 'calc.js']) vm.runInThisContext(fs.readFileSync(path.join(__dirname, f), 'utf8'), { filename: f });
+for (const f of ['data.js', 'calc.js', 'begriffe.js']) vm.runInThisContext(fs.readFileSync(path.join(__dirname, f), 'utf8'), { filename: f });
 
 let ok = 0, fehler = 0;
 function pruefe(name, ist, soll) {
@@ -226,6 +226,19 @@ const hb2 = heizlastBauteil({ U: 0.3, bauteilId: 'aussenwand', RT: 3, dU: 0, sR:
   { typ: 'baustoff', name: 'Eigenbau', quelle: '', R: 1 },
   { typ: 'luft_ruhend', name: '', quelle: '', R: 0.18 }] }, 'X', 'Außenwand', '2026-11-17T10:20:30.000Z');
 pruefe('Übergabe: ungeprüfte Schichten gemeldet', hb2.ungeprueft.join('|'), 'Zellulose|Eigenbau|Luftschicht (R aus Tabelle, ungeprüft)');
+
+// ── Syntax aller Skripte der Oberfläche (app.js wird sonst nicht geladen) ──
+for (const f of ['app.js', 'sw.js']) {
+  let fehlerText = '';
+  try { new vm.Script(fs.readFileSync(path.join(__dirname, f), 'utf8'), { filename: f }); } catch (e) { fehlerText = e.message; }
+  pruefe('Syntax ' + f, fehlerText, '');
+}
+// ── i-Erklärungen: jeder verwendete Schlüssel hat eine Erklärung ──
+const quelltext = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8') + fs.readFileSync(path.join(__dirname, 'app.js'), 'utf8');
+const schluessel = new Set([...quelltext.matchAll(/data-i="([A-Za-z_]+)"|info\('([A-Za-z_]+)'\)/g)].map(m => m[1] || m[2]).filter(k => k !== 'k'));
+pruefe('i-Erklärungen: alle Schlüssel vorhanden', [...schluessel].filter(k => !BEGRIFFE[k]).join(','), '');
+pruefe('i-Erklärungen: mindestens 40 Stellen', schluessel.size >= 40, true);
+pruefe('i-Erklärungen: jede mit Name und Text', Object.values(BEGRIFFE).every(b => b.n && b.t), true);
 
 console.log(`\n${ok} bestanden, ${fehler} fehlgeschlagen`);
 process.exitCode = fehler ? 1 : 0;
