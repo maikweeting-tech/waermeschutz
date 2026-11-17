@@ -162,7 +162,8 @@ const BEISPIELE = [
 //    'G' = noch nicht abgeglichen (aus dem Gedächtnis, prüfen!)
 const BAUSTOFFE = [
   // Dämmstoffe nach harmonisierten Normen: Name = Nennwert λ_D (Wärmeleitstufe),
-  // gerechnet wird mit dem Bemessungswert λ_B (Schneider 26, Tafel 4.43)
+  // gerechnet wird mit dem Bemessungswert λ_B (Schneider 26, Tafel 4.43, Fußnoten S. 4.45):
+  // MW, EPS, XPS, PUR, PF, CG, EPB: λ_B = λ_D · 1,03, mind. + 1 mW/(mK); WF, Kork: · 1,05, mind. + 2 mW/(mK)
   { gruppe: 'Dämmstoffe', stoffe: [
     { name: 'Mineralwolle (MW) 032', lambdaD: 0.032, lambda: 0.033, mu: 1, q: 'Z', tafel: '4.43' },
     { name: 'Mineralwolle (MW) 035', lambdaD: 0.035, lambda: 0.036, mu: 1, q: 'Z', tafel: '4.43' },

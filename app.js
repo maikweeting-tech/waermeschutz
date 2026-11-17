@@ -127,7 +127,7 @@ function onStoff(sel) {
 }
 
 function muText(s) {
-  if (s.dicht) return '∞ (praktisch dampfdicht)';
+  if (s.dicht) return '∞ (praktisch dampfdicht, s_d ≥ 1500 m)';
   return s.muMax ? `${s.mu.toLocaleString('de-DE')}/${s.muMax.toLocaleString('de-DE')}` : s.mu.toLocaleString('de-DE');
 }
 function quelleText(s) {
