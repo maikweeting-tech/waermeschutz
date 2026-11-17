@@ -96,26 +96,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ── Eingebettet in der Heizlast-App: keine Vorbelegungen ──────
 // Randbedingungen starten leer und müssen vor dem Berechnen gewählt werden.
-const LEER_FELDER = { bauteil: '', raum: '', richtung: '', 'theta-i': '', 'theta-e': '', 'din-ausgabe': '' };
+const LEER_FELDER = { bauteil: '', raum: '', richtung: '', 'theta-i': '', 'theta-e': '', 'din-ausgabe': '', 'lu-stufe': '', 'delta-ur': '' };
 const PFLICHT = [['bauteil', 'Bauteil'], ['raum', 'Raumnutzung'], ['richtung', 'Wärmestromrichtung'], ['theta-i', 'θ_i'], ['theta-e', 'θ_e'],
-  ['din-ausgabe', 'Ausgabe DIN 4108-2'], ['gmodg-fall', 'Anforderung GModG'], ['gmodg-zeile', 'Maßnahme (Anlage 7)']];
+  ['din-ausgabe', 'Ausgabe DIN 4108-2'], ['gmodg-fall', 'Anforderung GModG'], ['gmodg-zeile', 'Maßnahme (Anlage 7)'],
+  ['lu-stufe', 'Korrekturstufe Luftspalte ΔU_g (Stufe 0 = keine Korrektur)'], ['delta-ur', 'ΔU_r Umkehrdach (0 eintragen, wenn kein Umkehrdach)']];
 function leerStart() {
-  ['bauteil', 'raum', 'richtung', 'din-ausgabe', 'gmodg-fall'].forEach(id => {
+  ['bauteil', 'raum', 'richtung', 'din-ausgabe', 'gmodg-fall', 'lu-stufe'].forEach(id => {
     const el = $(id);
     if (![...el.options].some(o => o.value === '')) el.insertAdjacentHTML('afterbegin', '<option value="">— wählen —</option>');
     el.value = '';
   });
-  $('theta-i').value = ''; $('theta-e').value = '';
+  $('theta-i').value = ''; $('theta-e').value = ''; $('delta-ur').value = '';
   document.addEventListener('change', e => e.target.classList && e.target.classList.remove('fehlt'));
   document.addEventListener('input', e => e.target.classList && e.target.classList.remove('fehlt'));
 }
 function pflichtFehlt() {
   const fehlt = PFLICHT.filter(([id]) => {
     if (id === 'gmodg-zeile' && $('gmodg-fall').value !== 'bestand') return false;
+    if (id === 'delta-ur' && $('ur-schicht').value) return false;   // ΔU_r kommt dann aus Tafel 4.6b
     const el = $(id), leer = el.value === '' || (el.type === 'number' && isNaN(parseFloat(el.value)));
     el.classList.toggle('fehlt', leer);
     return leer;
   });
+  if (fehlt.some(([id]) => id === 'lu-stufe' || id === 'delta-ur')) $('det-korr').open = true;
   return fehlt.map(([, t]) => t);
 }
 
