@@ -200,3 +200,7 @@ svg.grafik { width: 100%; height: auto; display: block; margin-bottom: 12px; fon
   .rechenweg { border-left-color: #9C4A1A; }
   .ampel.ok { border-color: #2F6F43; } .ampel.nok { border-color: #A33232; }
 }
+
+/* Eingebettet in der Heizlast-App: eigene Kopfzeile und Teilen-Link ausblenden */
+.eingebettet .topbar, .eingebettet #btn-link, .eingebettet .aufgabe ~ .hinweis { display: none !important; }
+.eingebettet main { padding-top: 4px; }

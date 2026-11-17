@@ -320,7 +320,10 @@ function heizlastBauteil(e, name, artLabel, datumIso) {
     name, art: artLabel, artId: e.bauteilId, U,
     quelle: `Wärmeschutz-App, Bauteil „${name}“, U nach DIN EN ISO 6946 inkl. ΔU (${tag})`,
     datum: datumIso,
-    schichten: e.sR.map(s => ({ name: s.name, d: s.d, lambda: s.lambda, R: Math.round(s.R * 1000) / 1000 })),
+    schichten: e.sR.map(s => ({ name: s.name, d: s.d, lambda: s.lambda, R: Math.round(s.R * 1000) / 1000, quelle: s.quelle || '' })),
+    // Schichten ohne belegte Quelle (λ aus dem Gedächtnis „ungeprüft“, eigene Eingabe ohne Quelle, Luftschicht-Tabelle)
+    ungeprueft: e.sR.filter(s => s.typ === 'luft_ruhend' || !s.quelle || s.quelle === 'ungeprüft')
+      .map(s => (s.typ === 'luft_ruhend' ? 'Luftschicht (R aus Tabelle, ungeprüft)' : (s.name || 'Schicht ohne Namen'))),
     RT: Math.round(e.RT * 1000) / 1000, dU: Math.round(e.dU * 1000) / 1000
   };
 }

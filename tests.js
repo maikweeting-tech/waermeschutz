@@ -211,5 +211,21 @@ pruefe('Beispiele nutzen nur vorhandene Baustoffe',
   BEISPIELE.every(b => b.s.every(([typ, stoff]) => typ === 'luft_ruhend' || stoff === '' || namen.includes(stoff))), true);
 pruefe('Beispiele nutzen nur vorhandene Bauteile', BEISPIELE.every(b => BAUTEILE.some(x => x.id === b.f.bauteil)), true);
 
+// ── Übergabe an die Heizlast-App ──
+const hb = heizlastBauteil({ U: 0.23456, bauteilId: 'aussenwand', RT: 4.275, dU: 0,
+  sR: [{ typ: 'baustoff', name: 'KS', d: 17.5, lambda: 0.99, R: 0.1768, quelle: 'Schneider 26, Taf. 4.33' }] }, 'AW Test', 'Außenwand', '2026-11-17T10:20:30.000Z');
+pruefe('Übergabe: U auf 3 Stellen', hb.U, 0.235);
+pruefe('Übergabe: Quelle nennt Bauteilnamen und Datum', hb.quelle.includes('„AW Test“') && hb.quelle.includes('17.11.2026'), true);
+pruefe('Übergabe: Pflichtfelder vorhanden', ['id', 'name', 'art', 'U', 'quelle'].every(k => k in hb), true);
+const l2 = bauteilListeErgaenzen(bauteilListeErgaenzen([], hb), { ...hb, U: 0.3 });
+pruefe('Übergabe: gleicher Name ersetzt', l2.length + '|' + l2[0].U, '1|0.3');
+pruefe('Übergabe: belegte Schicht nicht als ungeprüft gemeldet', hb.ungeprueft.length, 0);
+const hb2 = heizlastBauteil({ U: 0.3, bauteilId: 'aussenwand', RT: 3, dU: 0, sR: [
+  { typ: 'baustoff', name: 'KS', quelle: 'Schneider 26, Taf. 4.33', R: 0.1 },
+  { typ: 'baustoff', name: 'Zellulose', quelle: 'ungeprüft', R: 1 },
+  { typ: 'baustoff', name: 'Eigenbau', quelle: '', R: 1 },
+  { typ: 'luft_ruhend', name: '', quelle: '', R: 0.18 }] }, 'X', 'Außenwand', '2026-11-17T10:20:30.000Z');
+pruefe('Übergabe: ungeprüfte Schichten gemeldet', hb2.ungeprueft.join('|'), 'Zellulose|Eigenbau|Luftschicht (R aus Tabelle, ungeprüft)');
+
 console.log(`\n${ok} bestanden, ${fehler} fehlgeschlagen`);
 process.exitCode = fehler ? 1 : 0;

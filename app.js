@@ -6,7 +6,11 @@ const $ = id => document.getElementById(id);
 const esc = s => { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; };
 function nr(el) { return parseFloat((typeof el === 'string' ? el : el.value).replace(',','.')); }
 
+// Eingebettet in die Heizlast-App (iframe)? Eigenständig ändert sich nichts.
+const EINGEBETTET = (() => { try { return window.parent !== window; } catch (e) { return true; } })();
+const WS_SPEICHER = 'fh21.heizlast.ws';
 function toast(msg) {
+  if (EINGEBETTET) { try { window.parent.postMessage({ typ: 'fh21.toast', text: msg }, '*'); return; } catch (e) { /* weiter */ } }
   const el = $('toast');
   el.textContent = msg;
   el.classList.add('zeigen');
@@ -68,12 +72,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Startzustand: aus Link oder 3 leere Zeilen
   const z = leseLink();
+  let gesichert = null;
+  if (EINGEBETTET) { try { gesichert = JSON.parse(localStorage.getItem(WS_SPEICHER) || 'null'); } catch (e) { gesichert = null; } }
   if (z) { ladeZustand(z); berechnen(); }
+  else if (gesichert && gesichert.f && Array.isArray(gesichert.s) && gesichert.s.length) ladeZustand(gesichert);
   else { addSchicht(); addSchicht(); addSchicht(); }
+  if (EINGEBETTET) {
+    document.documentElement.classList.add('eingebettet');
+    let t;
+    const sichern = () => { clearTimeout(t); t = setTimeout(() => { try { localStorage.setItem(WS_SPEICHER, JSON.stringify(zustand())); } catch (e) { /* voll/gesperrt */ } }, 300); };
+    document.addEventListener('input', sichern); document.addEventListener('change', sichern); document.addEventListener('click', sichern);
+  }
   window.addEventListener('hashchange', () => { const z = leseLink(); if (z) { ladeZustand(z); berechnen(); } });
 
   // Service Worker
-  if ('serviceWorker' in navigator) {
+  if ('serviceWorker' in navigator && !EINGEBETTET) {
     const hatteSW = !!navigator.serviceWorker.controller;
     navigator.serviceWorker.addEventListener('controllerchange', () => { if (hatteSW) location.reload(); });
     navigator.serviceWorker.register('sw.js').catch(() => {});
@@ -256,6 +269,10 @@ function anHeizlast() {
   const name = (window.prompt('Name des Bauteils für die Heizlast-App (z. B. „AW 1 – KS + WDVS“):', '') || '').trim();
   if (!name) { toast('Kein Name – nichts übergeben.'); return; }
   const b = heizlastBauteil(_erg, name, bt ? bt.label : _erg.bauteilId, new Date().toISOString());
+  if (EINGEBETTET) {
+    window.parent.postMessage({ typ: 'fh21.bauteil', bauteil: b }, '*');
+    return;
+  }
   let gespeichert = false;
   try {
     const alt = JSON.parse(localStorage.getItem(FH21_BAUTEILE_KEY) || '[]');
