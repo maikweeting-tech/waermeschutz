@@ -138,19 +138,28 @@
               <input type="number" id="bef-lambda" step="any" min="0">
             </label>
           </div>
-          <div class="reihe">
-            <label class="schalter"><input type="checkbox" id="bef-voll" checked> Volle Durchdringung</label>
+          <div class="reihe drei">
+            <label class="schalter"><input type="checkbox" id="bef-voll" checked> Volle Durchdringung (d₁ = d₀)</label>
             <label class="feld">Durchdrungene Schicht Nr.
               <input type="number" id="bef-schicht" min="1" step="1" placeholder="z.B. 2">
             </label>
+            <label class="feld" id="bef-d1-feld" hidden>Eindringtiefe d₁ <span class="einheit-label">[cm]</span>
+              <input type="number" id="bef-d1" step="any" min="0">
+            </label>
           </div>
+          <p class="hinweis klein">Näherungsverfahren nach Schneider 26, Tafel 4.6a: ΔU<sub>f</sub> = α·λ<sub>f</sub>·n<sub>f</sub>·A<sub>f</sub>/d₀ · (R₁/R<sub>T,h</sub>)² mit α = 0,8·d₁/d₀.</p>
         </div>
 
         <h3 style="margin-top:18px">Umkehrdach (ΔU<sub>r</sub>)</h3>
-        <label class="feld">ΔU<sub>r</sub> manuell <span class="einheit-label">[W/(m²K)]</span>
-          <input type="number" id="delta-ur" value="0" step="any" min="0">
-        </label>
-        <p class="hinweis">Nur bei Umkehrdächern. Wert muss separat ermittelt werden.</p>
+        <div class="reihe">
+          <label class="feld">Dämmschicht über der Abdichtung Nr.
+            <input type="number" id="ur-schicht" min="1" step="1" placeholder="leer = manuell">
+          </label>
+          <label class="feld">oder ΔU<sub>r</sub> manuell <span class="einheit-label">[W/(m²K)]</span>
+            <input type="number" id="delta-ur" value="0" step="any" min="0">
+          </label>
+        </div>
+        <p class="hinweis">Mit Schichtnummer: ΔU<sub>r</sub> nach DIN 4108-2 (Schneider 26, Tafel 4.6b) aus dem Anteil (R<sub>T</sub> − R<sub>i</sub>)/R<sub>T</sub>: unter 10 % → 0,05; 10 bis 50 % → 0,03; über 50 % → 0.</p>
       </div>
     </details>
   </section>

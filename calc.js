@@ -75,19 +75,39 @@ function deltaUg(stufe, schichten, RT, richtung, daemmNr) {
   };
 }
 
-// ── ΔU_f (Befestigungselemente) ───────────────────────────────
-function deltaUf(bef, schichten, richtung) {
+// ── ΔU_f (Befestigungselemente), Näherungsverfahren Schneider 26, Tafel 4.6a ─
+// ΔU_f = α·λ_f·n_f·A_f/d₀ · (R₁/R_T,h)²  mit α = 0,8·d₁/d₀ (volle Durchdringung: d₁ = d₀)
+function deltaUf(bef, schichten, richtung, RT) {
   if (!bef || !bef.nf || !bef.durchmesser || !bef.lambdaF) return { wert:0, text:'ΔU_f = 0 (keine Befestigungselemente)' };
   const idx = (bef.daemmNr || 1) - 1;
-  const dD = idx >= 0 && idx < schichten.length ? schichten[idx].d / 100 : 0;
-  if (dD <= 0) return { wert:0, text:'ΔU_f = 0 (Dämmdicke ≤ 0)' };
+  const s = idx >= 0 && idx < schichten.length ? schichten[idx] : null;
+  const d0 = s ? s.d / 100 : 0;
+  if (d0 <= 0) return { wert:0, text:'ΔU_f = 0 (Dämmdicke ≤ 0)' };
 
-  const alpha = ALPHA_BEF;
+  const d1 = bef.volleDurchdringung || !(bef.d1 > 0) ? d0 : Math.min(bef.d1 / 100, d0);
+  const alpha = ALPHA_BEF * d1 / d0;
   const Af = Math.PI / 4 * Math.pow(bef.durchmesser / 1000, 2);
-  const wert = alpha * bef.lambdaF * bef.nf * Af / dD;
+  const R1 = schichtR(s, richtung);
+  const v = R1 / RT;
+  const wert = alpha * bef.lambdaF * bef.nf * Af / d0 * v * v;
   return {
     wert,
-    text: `ΔU_f = α × λ_f × n_f × A_f / d₁\n     = ${fmtR(alpha)} × ${fmtR(bef.lambdaF)} × ${fmtR(bef.nf)} × ${fmtDU(Af)} / ${fmtR(dD)}\n     = ${fmtDU(wert)} W/(m²K)`
+    text: `α = 0,8 · d₁/d₀ = 0,8 · ${fmtR(d1)} / ${fmtR(d0)} = ${fmtR(alpha)}\n` +
+          `ΔU_f = α · λ_f · n_f · A_f / d₀ · (R₁ / R_T,h)²\n` +
+          `     = ${fmtR(alpha)} · ${fmtR(bef.lambdaF)} · ${fmtR(bef.nf)} · ${fmtDU(Af)} / ${fmtR(d0)} · (${fmtR(R1)} / ${fmtR(RT)})²\n` +
+          `     = ${fmtDU(wert)} W/(m²K)`
+  };
+}
+
+// ── ΔU_r (Umkehrdach) nach DIN 4108-2, Schneider 26, Tafel 4.6b ─
+// Anteil (R_T − R_i)/R_T: < 10 % → 0,05; 10 bis 50 % → 0,03; > 50 % → 0,00
+function deltaUrTafel(Ri, RT) {
+  const anteil = (RT - Ri) / RT * 100;
+  const wert = anteil < 10 ? 0.05 : anteil <= 50 ? 0.03 : 0;
+  return {
+    wert, anteil,
+    text: `ΔU_r nach Tafel 4.6b: (R_T − R_i) / R_T = (${fmtR(RT)} − ${fmtR(Ri)}) / ${fmtR(RT)} = ${anteil.toFixed(1).replace('.', ',')} %\n` +
+          `     → ΔU_r = ${fmtDU(wert)} W/(m²K)`
   };
 }
 
@@ -142,13 +162,24 @@ function pruefeGModG(fall, bauteilId, zeileId, raum, U) {
            keineAnforderung: umax === null, ok: umax === null || Ur <= umax };
 }
 
-// ── Schimmelnachweis f_Rsi (Norm-Randbedingungen, R_si = 0,25) ─
+// ── Taupunkttemperatur, Näherungsgleichung Schneider 26, Tafel 4.24 ─
+// θ_s = (φ·0,01)^0,1247 · (109,8 + θ) − 109,8   (φ in %)
+function taupunkt(theta, phi) {
+  return Math.pow(phi * 0.01, 0.1247) * (109.8 + theta) - 109.8;
+}
+
+// ── Schimmelnachweis (Schneider 26, S. 4.24): Schimmelpilzschwelle ─
+// θ_si,min = Taupunkt bei φ_i,O = φ_i / 0,8 = 1,25·φ_i; 20 °C / 50 % → 62,5 % → 12,6 °C
 function pruefeSchimmel(R) {
   const S = SCHIMMEL;
   const RT = S.rsi + R + S.rse;
   const fRsi = 1 - S.rsi / RT;
-  const thetaSi = S.te + fRsi * (S.ti - S.te);
-  return { ...S, R, RT, fRsi, thetaSi, ok: fRsi >= S.fmin };
+  const thetaSi = S.ti - (S.ti - S.te) * S.rsi / RT;
+  const phiO = S.phi / S.phiKapillar;
+  const thetaMin = Math.round(taupunkt(S.ti, phiO) * 10) / 10;
+  const erfR = S.rsi * (S.ti - S.te) / (S.ti - thetaMin) - (S.rsi + S.rse);
+  const erfU = (1 / S.rsi) * (S.ti - thetaMin) / (S.ti - S.te);
+  return { ...S, R, RT, fRsi, thetaSi, phiO, thetaMin, erfR, erfU, ok: Math.round(thetaSi * 10) / 10 >= thetaMin };
 }
 
 // ── Feuchteschutz: Glaser-Verfahren (DIN 4108-3) ──────────────
@@ -191,20 +222,52 @@ function glaser(schichten, richtung, dach) {
   const ebenen = huelle.slice(1, -1).map((h, j) => ({ ...h, theta: theta[h.k], mc: (g[j] - g[j+1]) * sek(T.stunden) }));
   const mc = ebenen.reduce((a, e) => a + e.mc, 0);
 
-  // Verdunstungsperiode mit festen Dampfdrücken (Tafel 4.29b); Tauwasserzone = erste bis letzte Ebene
+  // Verdunstungsperiode mit festen Dampfdrücken (Tafel 4.29b), Fälle nach Tafel 4.30
   let verd = null, mev = 0;
   if (ebenen.length) {
-    const V = G.verd;
+    const V = G.verd, d0 = G.delta0, tev = sek(V.stunden);
     const pc = dach ? V.psDach : V.psWand;
     const a = ebenen[0], b = ebenen[ebenen.length-1];
-    const gI = Math.max(0, G.delta0 * (pc - V.pI) / a.x);
-    const gE = Math.max(0, G.delta0 * (pc - V.pE) / (Sd - b.x));
-    mev = (gI + gE) * sek(V.stunden);
-    verd = { pc, piV: V.pI, peV: V.pE, gI, gE, xA: a.x, xB: b.x, dach };
+    verd = { pc, piV: V.pI, peV: V.pE, dach, tev };
+    if (ebenen.length === 1) {                       // Fall 2: eine Tauwasserebene
+      verd.fall = 2;
+      verd.gI = d0 * (pc - V.pI) / a.x;
+      verd.gE = d0 * (pc - V.pE) / (Sd - a.x);
+      verd.xA = verd.xB = a.x;
+      mev = (verd.gI + verd.gE) * tev;
+    } else if (ebenen.length === 2) {                // Fall 3: zwei Tauwasserebenen
+      verd.fall = 3;
+      const g1 = d0 * (pc - V.pI) / a.x, g2 = d0 * (pc - V.pE) / (Sd - b.x);
+      const t1 = a.mc / g1, t2 = b.mc / g2;
+      Object.assign(verd, { gI: g1, gE: g2, t1, t2, xA: a.x, xB: b.x });
+      if (t1 > tev && t2 > tev) { verd.variante = 'beide'; mev = (g1 + g2) * tev; }
+      else if (t1 < t2) {   // Ebene 1 trocknet zuerst, danach verdunstet Ebene 2 auch nach innen
+        verd.variante = 't1'; verd.g2i = d0 * (pc - V.pI) / b.x;
+        mev = g1 * t1 + g2 * t1 + (verd.g2i + g2) * (tev - t1);
+      } else {
+        verd.variante = 't2'; verd.g1e = d0 * (pc - V.pE) / (Sd - a.x);
+        mev = g2 * t2 + g1 * t2 + (g1 + verd.g1e) * (tev - t2);
+      }
+    } else {                                         // Fall 4: Tauwasserbereich
+      verd.fall = 4;
+      const xm = a.x + 0.5 * (b.x - a.x);
+      Object.assign(verd, { xA: a.x, xB: b.x, xm });
+      verd.gI = d0 * (pc - V.pI) / xm;
+      verd.gE = d0 * (pc - V.pE) / (Sd - xm);
+      mev = (verd.gI + verd.gE) * tev;
+    }
   }
 
-  const okMc = mc <= G.mcMax, okEv = mev >= mc;
-  return { n, sd, x, Sd, R, RT, theta, ps, pi, pe, huelle, g, ebenen, mc, mev, verd,
+  // Grenze M_c: 1,0 kg/m²; Holz ≤ 5 %, Holzwerkstoffe ≤ 3 % der flächenbezogenen Masse
+  // der an die Tauwasserebene grenzenden Schicht (Schneider 26, Abschn. 3.5.1 und Beispiel S. 4.31)
+  const holz = [];
+  ebenen.forEach(e => [schichten[e.k-1], schichten[e.k]].forEach(s => {
+    if (s && s.holz && s.rho && !holz.some(h => h.s === s))
+      holz.push({ s, name: s.name, anteil: s.holz, rho: s.rho, d: s.d / 100, grenze: s.holz * s.d / 100 * s.rho });
+  }));
+  const mcGrenze = Math.min(G.mcMax, ...holz.map(h => h.grenze));
+  const okMc = mc <= mcGrenze, okEv = mev >= mc;
+  return { n, sd, x, Sd, R, RT, theta, ps, pi, pe, huelle, g, ebenen, mc, mev, verd, holz, mcGrenze,
            mus: schichten.map(s => s.mu),
            tauwasser: ebenen.length > 0, okMc, okEv, ok: !ebenen.length || (okMc && okEv) };
 }

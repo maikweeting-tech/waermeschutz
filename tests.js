@@ -42,8 +42,16 @@ pruefe('θ_si (Norm) Außenwand', fmtT(schW.thetaSi), '18,6');
 const dg = deltaUg(1, wand, RTw, 'horizontal', 3);
 pruefe('ΔU_g Stufe 1 = 0,01·(3,889/4,275)²', fmtDU(dg.wert), '0,0083');
 pruefe('ΔU_g Stufe 0 = 0', deltaUg(0, wand, RTw, 'horizontal', 3).wert, 0);
-const df = deltaUf({ nf: 4, durchmesser: 6, lambdaF: 50, daemmNr: 3 }, wand, 'horizontal');
-pruefe('ΔU_f = 0,8·50·4·(π/4·0,006²)/0,14', fmtDU(df.wert), '0,0323');
+// Tafel 4.6a: ΔU_f = 0,8·50·4·(π/4·0,006²)/0,14 · (3,889/4,275)² = 0,03231 · 0,8275 = 0,0267
+const df = deltaUf({ nf: 4, durchmesser: 6, lambdaF: 50, daemmNr: 3, volleDurchdringung: true }, wand, 'horizontal', RTw);
+pruefe('ΔU_f nach Tafel 4.6a (volle Durchdringung)', fmtDU(df.wert), '0,0267');
+const dfHalb = deltaUf({ nf: 4, durchmesser: 6, lambdaF: 50, daemmNr: 3, volleDurchdringung: false, d1: 7 }, wand, 'horizontal', RTw);
+pruefe('ΔU_f: halbe Eindringtiefe → α = 0,4 → halber Wert', fmtDU(dfHalb.wert), fmtDU(df.wert / 2));
+
+// Tafel 4.6b: ΔU_r für Umkehrdächer
+pruefe('ΔU_r: Anteil 5 % → 0,05', deltaUrTafel(3.8, 4).wert, 0.05);
+pruefe('ΔU_r: Anteil 30 % → 0,03', deltaUrTafel(2.8, 4).wert, 0.03);
+pruefe('ΔU_r: Anteil 60 % → 0', deltaUrTafel(1.6, 4).wert, 0);
 
 // ── Altbau Vollziegel: Kalkputz 1,5 / Vollziegel 1800 24 / Kalkzementputz 2 ──
 // Hand: R = 0,015/1,0 + 0,24/0,81 + 0,02/1,0 = 0,3313; f_Rsi = 1 − 0,25/0,6213 = 0,5976; θ_si = −5 + 0,5976·25 = 9,94
@@ -55,7 +63,15 @@ const schA = pruefeSchimmel(Ra);
 pruefe('f_Rsi Altbau', fmtR(schA.fRsi), '0,598');
 pruefe('Altbau: Schimmelnachweis nicht erfüllt', schA.ok, false);
 pruefe('θ_si (Norm) Altbau', fmtT(schA.thetaSi), '9,9');
-pruefe('Grenzfall f_Rsi = 0,70 gilt als erfüllt', pruefeSchimmel(0.25 / 0.3 - 0.29).ok, true);
+// Schimmelpilzschwelle (Schneider 26, S. 4.24): φ_i,O = 1,25·50 = 62,5 % → θ_si,min = 12,6 °C
+pruefe('Taupunkt-Näherung 20 °C / 62,5 % = 12,6 °C', fmtT(taupunkt(20, 62.5)), '12,6');
+pruefe('Taupunkt-Näherung 20 °C / 50 % = 9,3 °C (Tafel 4.24)', fmtT(taupunkt(20, 50)), '9,3');
+pruefe('Taupunkt-Näherung 10 °C / 80 % = 6,7 °C (Tafel 4.24)', fmtT(taupunkt(10, 80)), '6,7');
+pruefe('Schimmelpilzschwelle θ_si,min', pruefeSchimmel(1).thetaMin, 12.6);
+// θ_si = 12,6 °C ↔ R_T = 0,25·25/7,4 = 0,8446 → R = 0,5546 (= erf R); θ_si = 12,5 °C ↔ R = 0,5433
+pruefe('erf R = 0,25·25/7,4 − 0,29', fmtR(pruefeSchimmel(1).erfR), '0,555');
+pruefe('θ_si = 12,6 °C → erfüllt', pruefeSchimmel(0.25 * 25 / 7.4 - 0.29).ok, true);
+pruefe('θ_si = 12,5 °C (f_Rsi = 0,70) → nicht erfüllt', pruefeSchimmel(0.25 * 25 / 7.5 - 0.29).ok, false);
 
 // ── Luftschichten ──
 pruefe('Luft 25 mm horizontal', fmtR(luftR(25, 'horizontal')), '0,180');
@@ -129,6 +145,35 @@ pruefe('Innendämmung: m_ev < m_c', gI.okEv, false);
 // Wand p_s = 1700 Pa: M_ev = 2,0e-10·7 776 000·(500/0,11 + 500/1,5) = 7,59 kg/m²
 pruefe('Innendämmung: M_ev (Wand, p_s 1700 Pa)', fmtU(gI.mev), '7,59');
 
+// ── PFLICHT-TESTFALL: Beispiel nach DIN 4108-3, Schneider 26, S. 4.31 ──
+// OSB 19 mm (μ 30/50) / Dampfbremse s_d 2,00 m / MW 040 160 mm (λ 0,040) / OSB 19 mm
+// Buch: R_T = 4,582; θ 18,6 | 17,8 | 17,8 | −4,0 | −4,8; p_sat 2147 | 2042 | 2042 | 437 | 409;
+// s_T = 3,68 m; M_c = 0,226 kg/m²; M_ev = 1,1 kg/m²; zul. M_c = 0,03·0,019·650 = 0,37 kg/m²
+const osb = () => ({ typ: 'baustoff', name: 'OSB-Platte (650)', d: 1.9, lambda: 0.13, mu: 30, muMin: 30, muMax: 50, rho: 650, holz: 0.03 });
+const bsp = [osb(), { typ: 'baustoff', name: 'Dampfbremse', d: 0.005, lambda: NaN, mu: 40000 },
+  { typ: 'baustoff', name: 'MW 040', d: 16, lambda: 0.040, mu: 1 }, osb()];
+const gB = glaserUnguenstig(bsp, 'horizontal', false);
+pruefe('S. 4.31: μ automatisch innen 30, außen 50 (Tafel 4.29a)', [gB.mus[0], gB.mus[3]].join(), '30,50');
+pruefe('S. 4.31: R_T = 4,582', fmtR(gB.RT), '4,582');
+pruefe('S. 4.31: Temperaturen', gB.theta.map(fmtT).join(' | '), '18,6 | 17,8 | 17,8 | -4,0 | -4,8');
+pruefe('S. 4.31: p_sat (±2 Pa)', gB.ps.map((p, i) => Math.abs(p - [2147, 2042, 2042, 437, 409][i]) <= 2).every(Boolean), true);
+pruefe('S. 4.31: s_T = 3,68 m', fmtR(gB.Sd), '3,680');
+pruefe('S. 4.31: eine Tauwasserebene zwischen MW und OSB außen', gB.ebenen.map(e => e.k).join(), '3');
+pruefe('S. 4.31: M_c = 0,226 → 0,23 kg/m²', fmtU(gB.mc), '0,23');
+pruefe('S. 4.31: M_ev = 1,1 kg/m²', fmtU(gB.mev), '1,10');
+pruefe('S. 4.31: zul. M_c = 0,03·0,019·650 = 0,37 kg/m²', fmtU(gB.mcGrenze), '0,37');
+pruefe('S. 4.31: Nachweis erfüllt', gB.ok, true);
+
+// ── Tafel 4.30 Fall 3 (zwei Tauwasserebenen) ──
+// s_d: Putz 0,15 | MW 0,08 | Beton 5,0 | MW 0,08 | Folie 100 → Ebenen bei 0,23 m und 5,31 m
+// g_ev1 = 2e-10·500/0,23 = 4,348e-7; g_ev2 = 2e-10·500/100 = 1e-9; t_ev1 = M_c1/g_ev1 < t_ev2
+// M_ev = M_c1 + g_ev2·t_ev1 + (2e-10·500/5,31 + g_ev2)·(t_ev − t_ev1) = 0,972 + 0,002 + 0,110 = 1,08
+const L3 = (name, d, lambda, mu) => ({ typ: 'baustoff', name, d, lambda, mu });
+const g3 = glaser([L3('Putz', 1.5, 0.7, 10), L3('MW', 8, 0.036, 1), L3('Beton', 5, 2.3, 100), L3('MW', 8, 0.036, 1), L3('Folie', 0.02, NaN, 500000)], 'horizontal', false);
+pruefe('Fall 3: zwei Ebenen', g3.ebenen.map(e => e.k).join(), '2,4');
+pruefe('Fall 3: Ebene 1 trocknet zuerst', g3.verd.variante, 't1');
+pruefe('Fall 3: M_ev', fmtU(g3.mev), '1,08');
+
 // ── GModG (§ 36 / Anlage 7, Anlage 1) ──
 pruefe('GModG: KS + WDVS U = 0,23 ≤ 0,24 (Nr. 1b)', pruefeGModG('bestand', 'aussenwand', '1b', 'normal', 1 / RTw).ok, true);
 pruefe('GModG: Vorauswahl Außenwand ist Nr. 1b', pruefeGModG('bestand', 'aussenwand', '', 'normal', 0.3).zeile.id, '1b');
@@ -163,7 +208,7 @@ pruefe('Dämmstoffe mit λ_D: λ_B > λ_D', BAUSTOFFE.flatMap(g => g.stoffe).fil
 pruefe('Taf. 4.33: Aluminiumfolie s_d = 1500 m', Math.round(st('Aluminiumfolie 0,05 mm (s_d = 1500 m)').mu * 0.005 / 100), 1500);
 pruefe('Anlage 7: Fußnote 1 gilt für Nr. 1a, 1b, 5a–5c, 6a–6e', GMODG.anl7.every(z => z.fn.includes(1)), true);
 pruefe('Beispiele nutzen nur vorhandene Baustoffe',
-  BEISPIELE.every(b => b.s.every(([typ, stoff]) => typ === 'luft_ruhend' || namen.includes(stoff))), true);
+  BEISPIELE.every(b => b.s.every(([typ, stoff]) => typ === 'luft_ruhend' || stoff === '' || namen.includes(stoff))), true);
 pruefe('Beispiele nutzen nur vorhandene Bauteile', BEISPIELE.every(b => BAUTEILE.some(x => x.id === b.f.bauteil)), true);
 
 console.log(`\n${ok} bestanden, ${fehler} fehlgeschlagen`);

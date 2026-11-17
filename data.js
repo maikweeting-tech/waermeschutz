@@ -103,13 +103,12 @@ const R_MIN = {
 // DIN EN ISO 6946:2018-03, Anhang D (Berichtigung 1:2023-04 ggf. beachten) – G
 const DELTA_UG = { 0: 0, 1: 0.01, 2: 0.04 };
 
-// Schimmelnachweis (Mindestwärmeschutz an der inneren Oberfläche)
-// DIN 4108-2, Abschnitt 6.2: f_Rsi ≥ 0,70 bei θ_i = 20 °C, φ_i = 50 %, θ_e = −5 °C,
-// R_si = 0,25 m²K/W (erhöht, Feuchteschutz), R_se = 0,04 m²K/W → θ_si ≥ 12,6 °C
-// R_si/R_se: Z (Schneider 26, Tafel 4.4a); f_Rsi, θ-Randbedingungen: G
-const SCHIMMEL = { rsi: 0.25, rse: 0.04, fmin: 0.70, ti: 20, te: -5, phi: 50, thetaMin: 12.6 };
+// Schimmelnachweis an der inneren Oberfläche – Z (Schneider 26, S. 4.24, Tafel 4.24 und 4.4a):
+// Schimmelpilzschwelle = Taupunkt bei φ_i,O = φ_i / 0,8 (Kapillarkondensation ab 80 %);
+// θ_i = 20 °C, φ_i = 50 % → 62,5 % → θ_si ≥ 12,6 °C; θ_e = −5 °C; R_si = 0,25, R_se = 0,04 m²K/W
+const SCHIMMEL = { rsi: 0.25, rse: 0.04, ti: 20, te: -5, phi: 50, phiKapillar: 0.8 };
 
-// α für Befestigungselemente (volle Durchdringung) – G
+// α für Befestigungselemente: α = 0,8 · d₁/d₀ – Z (Schneider 26, Tafel 4.6a)
 const ALPHA_BEF = 0.8;
 
 // Typische U-Wert-Bereiche [W/(m²K)] – zur Plausibilitätsprüfung
@@ -124,8 +123,8 @@ const U_TYPISCH = {
 // Richtungslabels
 const RICHTUNG_LABEL = { horizontal:'horizontal', aufwaerts:'aufwärts', abwaerts:'abwärts' };
 
-// Beispielaufbauten (innen → außen). Schicht: [Typ, Baustoff aus BAUSTOFFE oder '', Name, d in cm, μ (optional,
-// sonst der kleinere Tabellenwert – hier gesetzt, wo außen der größere Wert ungünstiger ist)]
+// Beispielaufbauten (innen → außen). Schicht: [Typ, Baustoff aus BAUSTOFFE oder '', Name, d in cm,
+// μ (optional, sonst Tabellenwert/-bereich), λ (optional, für eigene Baustoffe)]
 const BEISPIELE = [
   { titel: 'Außenwand KS + WDVS (EPS 035)', f: { bauteil: 'aussenwand' }, s: [
     ['baustoff', 'Gipsputz (1400)', '', 1.5], ['baustoff', 'Kalksandstein (1800)', '', 17.5],
@@ -150,6 +149,13 @@ const BEISPIELE = [
   { titel: 'Kellerdecke, unterseitig gedämmt', f: { bauteil: 'kellerdecke' }, s: [
     ['baustoff', 'Zementestrich (2000)', '', 5], ['baustoff', 'EPS (Styropor) 040', '', 3],
     ['baustoff', 'Stahlbeton (2300, 1 % Stahl)', '', 18], ['baustoff', 'Mineralwolle (MW) 035', '', 10] ]},
+  // Rechenbeispiel nach DIN 4108-3 aus Schneider 26, S. 4.31 (belüftete Luftschicht und
+  // Wetterschutzschale gehen nicht ein); MW mit λ = 0,040 und Dampfbremse wie im Buch
+  { titel: 'Holzrahmenwand – Beispiel DIN 4108-3 (Schneider S. 4.31)', f: { bauteil: 'aussenwand' }, s: [
+    ['baustoff', 'OSB-Platte (650)', '', 1.9],
+    ['baustoff', '', 'Dampfbremse (s_d = 2,00 m)', 0.005, 40000],
+    ['baustoff', '', 'Mineralwolle 040 (λ = 0,040 wie im Buch)', 16, 1, 0.040],
+    ['baustoff', 'OSB-Platte (650)', '', 1.9] ]},
   { titel: 'Altbau: Vollziegel ungedämmt', f: { bauteil: 'aussenwand' }, s: [
     ['baustoff', 'Kalk-/Kalkzementputz (1800)', '', 1.5], ['baustoff', 'Vollziegel (1800)', '', 24], ['baustoff', 'Kalk-/Kalkzementputz (1800)', '', 2] ]},
 ];
@@ -207,13 +213,14 @@ const BAUSTOFFE = [
     { name: 'Leichtbeton, geschlossenes Gefüge (1600)', lambda: 1.00, mu: 70, muMax: 150, q: 'Z' },
   ]},
   { gruppe: 'Holz / Holzwerkstoffe', stoffe: [
-    { name: 'Nadelholz / KVH (500)', lambda: 0.13, mu: 20, muMax: 50, q: 'Z' },
-    { name: 'Laubholz (700)', lambda: 0.18, mu: 50, muMax: 200, q: 'Z' },
-    { name: 'Sperrholz (500)', lambda: 0.13, mu: 70, muMax: 200, q: 'Z' },
-    { name: 'OSB-Platte (650)', lambda: 0.13, mu: 30, muMax: 50, q: 'Z' },
-    { name: 'Spanplatte (600)', lambda: 0.14, mu: 15, muMax: 50, q: 'Z' },
-    { name: 'Holzfaserplatte / MDF (600)', lambda: 0.14, mu: 12, muMax: 20, q: 'Z' },
-    { name: 'Holzfaserplatte (250)', lambda: 0.07, mu: 3, muMax: 5, q: 'Z' },
+    // holz: zulässige Erhöhung des massebezogenen Feuchtegehalts (Holz 5 %, Holzwerkstoffe 3 %, Abschn. 3.5.1)
+    { name: 'Nadelholz / KVH (500)', lambda: 0.13, mu: 20, muMax: 50, rho: 500, holz: 0.05, q: 'Z' },
+    { name: 'Laubholz (700)', lambda: 0.18, mu: 50, muMax: 200, rho: 700, holz: 0.05, q: 'Z' },
+    { name: 'Sperrholz (500)', lambda: 0.13, mu: 70, muMax: 200, rho: 500, holz: 0.03, q: 'Z' },
+    { name: 'OSB-Platte (650)', lambda: 0.13, mu: 30, muMax: 50, rho: 650, holz: 0.03, q: 'Z' },
+    { name: 'Spanplatte (600)', lambda: 0.14, mu: 15, muMax: 50, rho: 600, holz: 0.03, q: 'Z' },
+    { name: 'Holzfaserplatte / MDF (600)', lambda: 0.14, mu: 12, muMax: 20, rho: 600, holz: 0.03, q: 'Z' },
+    { name: 'Holzfaserplatte (250)', lambda: 0.07, mu: 3, muMax: 5, rho: 250, holz: 0.03, q: 'Z' },
   ]},
   { gruppe: 'Putze / Mörtel / Estriche', stoffe: [
     { name: 'Kalk-/Kalkzementputz (1800)', lambda: 1.0, mu: 15, muMax: 35, q: 'Z' },
@@ -244,7 +251,7 @@ const BAUSTOFFE = [
 BAUSTOFFE.forEach(g => g.stoffe.forEach(s => { if (s.sd) s.mu = Math.round(s.sd / (s.d / 100)); }));
 
 // Feuchteschutz: Glaser-Verfahren nach DIN 4108-3 – Z (Schneider 26, Tafel 4.29b, Tafel 4.4a,
-// Abschnitt 3.5.1); nur δ0 ist noch G (Tafel 4.30 fehlt)
+// Abschnitt 3.5.1, Tafel 4.30, Abschnitt 3.2)
 // Tauperiode Dez.–Feb., 90 d = 2160 h: innen 20 °C / 50 % (1168 Pa), außen −5 °C / 80 % (321 Pa)
 // Verdunstungsperiode Juni–Aug., 90 d: p_i = p_e = 1200 Pa; im Tauwasserbereich p_s = 1700 Pa
 // (Außenwände, Decken gegen Dachraum) bzw. 2000 Pa (Dächer). R_si = 0,25, R_se = 0,04.
@@ -253,6 +260,6 @@ const GLASER = {
   rsi: 0.25, rse: 0.04,
   tau: { ti: 20, phiI: 0.50, te: -5, phiE: 0.80, stunden: 2160 },
   verd: { pI: 1200, pE: 1200, psWand: 1700, psDach: 2000, stunden: 2160 },
-  delta0: 2.0e-10,       // Wasserdampf-Diffusionsleitkoeffizient der Luft [kg/(m·s·Pa)] – G
+  delta0: 2.0e-10,       // Wasserdampf-Diffusionsleitkoeffizient der Luft [kg/(m·s·Pa)] – Z (Abschn. 3.2)
   mcMax: 1.0, mcMaxNichtKapillar: 0.5
 };

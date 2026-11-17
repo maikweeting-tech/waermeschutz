@@ -29,6 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Toggle-Felder
   $('bef-aktiv').addEventListener('change', e => $('bef-felder').hidden = !e.target.checked);
+  $('bef-voll').addEventListener('change', e => $('bef-d1-feld').hidden = e.target.checked);
   $('inhom-aktiv').addEventListener('change', e => $('inhom-felder').hidden = !e.target.checked);
 
   // Schichten-Buttons
@@ -159,10 +160,10 @@ function addSchicht() {
 
 // ── Zustand speichern / laden (Beispiele, Teilen-Link) ────────
 const FELDER = ['bauteil','raum','richtung','theta-i','theta-e','din-ausgabe','lu-stufe','lu-schicht',
-  'bef-aktiv','bef-nf','bef-dm','bef-lambda','bef-voll','bef-schicht','delta-ur',
+  'bef-aktiv','bef-nf','bef-dm','bef-lambda','bef-voll','bef-d1','bef-schicht','delta-ur','ur-schicht',
   'inhom-aktiv','inhom-nr','inhom-name','inhom-lambda','inhom-fa','inhom-fb','gmodg-fall','gmodg-zeile'];
 const STANDARD = { raum:'normal', 'theta-i':'20', 'theta-e':'-5', 'din-ausgabe':'2013-02', 'lu-stufe':'0', 'lu-schicht':'',
-  'bef-aktiv':false, 'bef-nf':'', 'bef-dm':'', 'bef-lambda':'', 'bef-voll':true, 'bef-schicht':'', 'delta-ur':'0',
+  'bef-aktiv':false, 'bef-nf':'', 'bef-dm':'', 'bef-lambda':'', 'bef-voll':true, 'bef-d1':'', 'bef-schicht':'', 'delta-ur':'0', 'ur-schicht':'',
   'inhom-aktiv':false, 'inhom-nr':'', 'inhom-name':'', 'inhom-lambda':'', 'inhom-fa':'', 'inhom-fb':'',
   'gmodg-fall':'bestand', 'gmodg-zeile':'' };
 
@@ -181,8 +182,9 @@ function ladeZustand(z) {
   });
   fuelleAnl7(z.f['gmodg-zeile']);
   $('bef-felder').hidden = !$('bef-aktiv').checked;
+  $('bef-d1-feld').hidden = $('bef-voll').checked;
   $('inhom-felder').hidden = !$('inhom-aktiv').checked;
-  $('det-korr').open = $('lu-stufe').value !== '0' || $('bef-aktiv').checked || (nr($('delta-ur')) || 0) !== 0;
+  $('det-korr').open = $('lu-stufe').value !== '0' || $('bef-aktiv').checked || (nr($('delta-ur')) || 0) !== 0 || !!$('ur-schicht').value;
   $('det-inhom').open = $('inhom-aktiv').checked;
   $('schichten').innerHTML = '';
   z.s.forEach(([typ, stoff, name, d, lam, quelle, mu]) => {
@@ -209,10 +211,11 @@ function ladeZustand(z) {
 function beispielZustand(b) {
   const bt = BAUTEILE.find(x => x.id === b.f.bauteil);
   const f = { ...STANDARD, 'gmodg-fall': $('gmodg-fall').value, richtung: bt ? bt.richtung : 'horizontal', ...b.f };
-  const s = b.s.map(([typ, stoff, name, d, mu]) => {
+  const s = b.s.map(([typ, stoff, name, d, mu, lam]) => {
     const st = BAUSTOFFE.flatMap(g => g.stoffe).find(x => x.name === stoff);
     const m = mu !== undefined ? mu : st ? st.mu : (typ === 'luft_ruhend' ? 1 : '');
-    return [typ, stoff, name, String(d), st && st.lambda ? String(st.lambda) : '', quelleText(st), String(m)];
+    const l = lam !== undefined ? lam : st && st.lambda ? st.lambda : '';
+    return [typ, stoff, name, String(d), String(l), st ? quelleText(st) : (stoff === '' && typ === 'baustoff' ? 'Schneider 26, S. 4.31' : ''), String(m)];
   });
   return { f, s };
 }
@@ -278,6 +281,7 @@ function leseSchichten() {
     // μ-Bereich aus der Tafel nur, wenn der vorbelegte kleinere Wert nicht verändert wurde
     const st = BAUSTOFFE.flatMap(g => g.stoffe).find(x => x.name === r.querySelector('.s-stoff').value);
     if (st && st.muMax && mu === st.mu) { s.muMin = st.mu; s.muMax = st.muMax; }
+    if (st && st.holz) { s.holz = st.holz; s.rho = st.rho; }
     return s;
   }).filter(s => s.d > 0 && (s.typ !== 'baustoff' || s.lambda > 0 || s.mu > 0));
 }
@@ -300,6 +304,7 @@ function leseBef() {
     durchmesser: nr($('bef-dm')),
     lambdaF: nr($('bef-lambda')),
     volleDurchdringung: $('bef-voll').checked,
+    d1: nr($('bef-d1')),
     daemmNr: parseInt($('bef-schicht').value) || 1
   };
 }
@@ -314,7 +319,6 @@ function berechnen() {
   const din = $('din-ausgabe').value;
   const luSt = parseInt($('lu-stufe').value);
   const luNr = parseInt($('lu-schicht').value) || 0;
-  const dUr = nr($('delta-ur')) || 0;
 
   const schichten = leseSchichten();
   if (!schichten.length) { toast('Mindestens eine Schicht mit d und λ eingeben.'); return; }
@@ -345,7 +349,10 @@ function berechnen() {
 
   const U0 = 1 / RT;
   const dg = deltaUg(luSt, schichten, RT, richtung, luNr);
-  const df = deltaUf(leseBef(), schichten, richtung);
+  const df = deltaUf(leseBef(), schichten, richtung, RT);
+  const urNr = parseInt($('ur-schicht').value) || 0;
+  const ur = urNr >= 1 && urNr <= schichten.length ? deltaUrTafel(schichtR(schichten[urNr - 1], richtung), RT) : null;
+  const dUr = ur ? ur.wert : (nr($('delta-ur')) || 0);
   const dU = dg.wert + df.wert + dUr;
   const U = U0 + dU;
 
@@ -359,7 +366,7 @@ function berechnen() {
   const feuchte = muFehlt.length ? { muFehlt } : { ...glaserUnguenstig(schichten, richtung, bt && bt.rminKey === 'dach'), schichten };
   const gmodg = pruefeGModG($('gmodg-fall').value, bauteilId, $('gmodg-zeile').value, raum, U);
 
-  zeigeErgebnis({ sR, rsi, rse, RT, U0, dg, df, dUr, dU, U, Rvorh, temp, minErg, gmodg, schimmel, feuchte, plaus, ti, te, richtung, bauteilId, raum, din, inhomErg });
+  zeigeErgebnis({ sR, rsi, rse, RT, U0, dg, df, dUr, ur, dU, U, Rvorh, temp, minErg, gmodg, schimmel, feuchte, plaus, ti, te, richtung, bauteilId, raum, din, inhomErg });
 }
 
 // ── Ergebnisanzeige ───────────────────────────────────────────
@@ -532,7 +539,7 @@ function htmlRechenweg(e) {
   rw += `\n<div style="margin:8px 0"><strong>Schritt 4 – Korrekturwerte ΔU</strong></div>`;
   rw += e.dg.text + '\n';
   rw += e.df.text + '\n';
-  rw += `ΔU<sub>r</sub> = ${fmtDU(e.dUr)} W/(m²K)\n`;
+  rw += e.ur ? e.ur.text + '\n' : `ΔU<sub>r</sub> = ${fmtDU(e.dUr)} W/(m²K)${e.dUr ? ' (manuell)' : ''}\n`;
   rw += `ΔU = ΔU<sub>g</sub> + ΔU<sub>f</sub> + ΔU<sub>r</sub> = ${fmtDU(e.dg.wert)} + ${fmtDU(e.df.wert)} + ${fmtDU(e.dUr)} = <span class="erg">${fmtDU(e.dU)} W/(m²K)</span>\n`;
 
   // Schritt 5: U korrigiert
@@ -645,21 +652,29 @@ U ${g.ok ? '≤' : '>'} U<sub>Ref</sub> → <span class="erg">${g.ok ? 'besser a
 function htmlSchimmel(e) {
   const m = e.schimmel;
   const cls = m.ok ? 'ok' : 'nok', sym = m.ok ? '✓' : '✗';
-  const rw = `R'<sub>T</sub> = R<sub>si</sub> + R + R<sub>se</sub> = ${fmtR(m.rsi)} + ${fmtR(m.R)} + ${fmtR(m.rse)} = ${fmtR(m.RT)} m²K/W
-f<sub>Rsi</sub> = 1 − R<sub>si</sub> / R'<sub>T</sub> = 1 − ${fmtR(m.rsi)} / ${fmtR(m.RT)} = <span class="erg">${fmtR(m.fRsi)}</span> ${m.ok ? '≥' : '<'} ${fmtEta(m.fmin)}
-θ<sub>si</sub> = θ<sub>e</sub> + f<sub>Rsi</sub> · (θ<sub>i</sub> − θ<sub>e</sub>) = ${fmtT(m.te)} + ${fmtR(m.fRsi)} · (${fmtT(m.ti)} − (${fmtT(m.te)})) = <span class="erg">${fmtT(m.thetaSi)} °C</span> ${m.thetaSi >= m.thetaMin ? '≥' : '<'} ${fmtT(m.thetaMin)} °C`;
+  const vgl = m.ok ? '≥' : '<';
+  const rw = `<strong>Schimmelpilzschwelle</strong> (Kapillarkondensation ab φ ≈ 80 %)
+φ<sub>i,O</sub> = φ<sub>i</sub> / 0,8 = ${m.phi} / 0,8 = ${String(m.phiO).replace('.', ',')} %
+θ<sub>si,min</sub> = Taupunkt bei ${fmtT(m.ti)} °C und ${String(m.phiO).replace('.', ',')} % = (${(m.phiO / 100).toFixed(3).replace('.', ',')})<sup>0,1247</sup> · (109,8 + ${fmtT(m.ti)}) − 109,8 = <span class="erg">${fmtT(m.thetaMin)} °C</span>
+
+<strong>Oberflächentemperatur</strong>
+R<sub>T</sub> = R<sub>si</sub> + R + R<sub>se</sub> = ${fmtR(m.rsi)} + ${fmtR(m.R)} + ${fmtR(m.rse)} = ${fmtR(m.RT)} m²K/W
+θ<sub>si</sub> = θ<sub>i</sub> − (θ<sub>i</sub> − θ<sub>e</sub>) · R<sub>si</sub> / R<sub>T</sub> = ${fmtT(m.ti)} − ${fmtT(m.ti - m.te)} · ${fmtR(m.rsi)} / ${fmtR(m.RT)} = <span class="erg">${fmtT(m.thetaSi)} °C</span> ${vgl} ${fmtT(m.thetaMin)} °C
+
+<strong>Gleichwertig</strong>
+erf R = R<sub>si</sub> · (θ<sub>i</sub> − θ<sub>e</sub>) / (θ<sub>i</sub> − θ<sub>s</sub>) − (R<sub>si</sub> + R<sub>se</sub>) = ${fmtR(m.rsi)} · ${fmtT(m.ti - m.te)} / ${fmtT(m.ti - m.thetaMin)} − ${fmtR(m.rsi + m.rse)} = ${fmtR(m.erfR)} m²K/W → R = ${fmtR(m.R)} ${vgl} erf R
+erf U = (1 / R<sub>si</sub>) · (θ<sub>i</sub> − θ<sub>s</sub>) / (θ<sub>i</sub> − θ<sub>e</sub>) = ${fmtR(m.erfU)} W/(m²K)   (Temperaturfaktor f<sub>Rsi</sub> = ${fmtR(m.fRsi)})`;
   return `<div class="karte">
-    <p class="erg-titel">6 – Schimmelnachweis (Temperaturfaktor f<sub>Rsi</sub>)</p>
-    <p class="hinweis">Norm-Randbedingungen nach DIN 4108-2: θ<sub>i</sub> = ${fmtT(m.ti)} °C, φ<sub>i</sub> = ${m.phi} %, θ<sub>e</sub> = ${fmtT(m.te)} °C, erhöhter R<sub>si</sub> = ${fmtR(m.rsi)} m²K/W. Unabhängig von θ<sub>i</sub>/θ<sub>e</sub> oben.</p>
+    <p class="erg-titel">6 – Schimmelnachweis (Schimmelpilzschwelle θ<sub>si,min</sub>)</p>
+    <p class="hinweis">Randbedingungen: θ<sub>i</sub> = ${fmtT(m.ti)} °C, φ<sub>i</sub> = ${m.phi} %, θ<sub>e</sub> = ${fmtT(m.te)} °C, R<sub>si</sub> = ${fmtR(m.rsi)}, R<sub>se</sub> = ${fmtR(m.rse)} m²K/W (beheizte Räume). Unabhängig von θ<sub>i</sub>/θ<sub>e</sub> oben.</p>
     <div class="rechenweg">${rw}</div>
     <div class="ampel ${cls}" style="margin-top:12px">
       <div class="licht">${sym}</div>
       <div>Schimmelfreiheit in der Fläche ${m.ok ? 'gegeben' : 'NICHT gegeben'}<br>
-        <small>f<sub>Rsi</sub> = ${fmtR(m.fRsi)} ${m.ok ? '≥' : '<'} 0,70</small></div>
+        <small>θ<sub>si</sub> = ${fmtT(m.thetaSi)} °C ${vgl} θ<sub>si,min</sub> = ${fmtT(m.thetaMin)} °C</small></div>
     </div>
-    <p class="hinweis klein" style="margin-top:8px">Gilt für die ungestörte Fläche. Maßgebend sind meist Wärmebrücken (Ecken, Anschlüsse) – dort f<sub>Rsi</sub> gesondert nachweisen.</p>
-    <p class="hinweis klein">R<sub>si</sub> = 0,25 und R<sub>se</sub> = 0,04 m²K/W für beheizte Räume: Schneider 26, Tafel 4.4a.</p>
-    <p class="pruefen">f<sub>Rsi</sub> ≥ 0,70 bzw. θ<sub>si</sub> ≥ 12,6 °C aus dem Gedächtnis – gegen DIN 4108-2, Abschnitt 6.2 prüfen!</p>
+    <p class="hinweis klein" style="margin-top:8px">Gilt für die ungestörte Fläche. Maßgebend sind meist Wärmebrücken (Ecken, Anschlüsse) – dort die niedrigste Oberflächentemperatur nach DIN EN ISO 10211 nachweisen.</p>
+    <p class="hinweis klein">Quelle: Schneider 26, S. 4.24 (Schimmelpilzschwelle, Tafel 4.24 Taupunkttemperatur) und Tafel 4.4a (R<sub>si</sub>/R<sub>se</sub>).</p>
   </div>`;
 }
 
@@ -711,18 +726,42 @@ g = δ<sub>0</sub> · (p<sub>i</sub> − p<sub>e</sub>) / S<sub>d</sub> = ${fmtG
   m<sub>c</sub> = t<sub>c</sub> · (g<sub>${j+1}</sub> − g<sub>${j+2}</sub>) = ${T.stunden} h · (${fmtG(F.g[j])} − ${fmtG(F.g[j+1])}) g/(m²h) = <span class="erg">${fmtM(eb.mc)} kg/m²</span>\n`;
     });
     const v = F.verd;
-    rw += `\n<strong>Verdunstungsperiode</strong> (Juni–August, ${V.stunden} h; Dampfdrücke nach Tafel 4.29b)
-p<sub>i</sub> = p<sub>e</sub> = ${fmtP(v.piV)} Pa, im Tauwasserbereich p<sub>s</sub> = ${fmtP(v.pc)} Pa (${v.dach ? 'Dach' : 'Außenwand/Decke'})
-g<sub>i</sub> = δ<sub>0</sub> · (p<sub>s</sub> − p<sub>i</sub>) / s<sub>d,i</sub> = 2,0·10⁻¹⁰ · (${fmtP(v.pc)} − ${fmtP(v.piV)}) / ${fmtSd(v.xA)} = ${fmtG(v.gI)} g/(m²h)
-g<sub>e</sub> = δ<sub>0</sub> · (p<sub>s</sub> − p<sub>e</sub>) / s<sub>d,e</sub> = 2,0·10⁻¹⁰ · (${fmtP(v.pc)} − ${fmtP(v.peV)}) / ${fmtSd(F.Sd - v.xB)} = ${fmtG(v.gE)} g/(m²h)
-m<sub>ev</sub> = t<sub>ev</sub> · (g<sub>i</sub> + g<sub>e</sub>) = <span class="erg">${fmtM(F.mev)} kg/m²</span>`;
+    const h = s => (s / 3600).toFixed(0);
+    rw += `\n<strong>Verdunstungsperiode</strong> (Juni–August, ${V.stunden} h; Dampfdrücke nach Tafel 4.29b; Tafel 4.30 Fall ${v.fall})
+p<sub>i</sub> = p<sub>e</sub> = ${fmtP(v.piV)} Pa, im Tauwasserbereich p<sub>c</sub> = ${fmtP(v.pc)} Pa (${v.dach ? 'Dach' : 'Außenwand/Decke'})\n`;
+    if (v.fall === 2) {
+      rw += `g<sub>i</sub> = δ<sub>0</sub> · (p<sub>c</sub> − p<sub>i</sub>) / s<sub>d,c</sub> = 2,0·10⁻¹⁰ · (${fmtP(v.pc)} − ${fmtP(v.piV)}) / ${fmtSd(v.xA)} = ${fmtG(v.gI)} g/(m²h)
+g<sub>e</sub> = δ<sub>0</sub> · (p<sub>c</sub> − p<sub>e</sub>) / (s<sub>d,T</sub> − s<sub>d,c</sub>) = 2,0·10⁻¹⁰ · (${fmtP(v.pc)} − ${fmtP(v.peV)}) / ${fmtSd(F.Sd - v.xA)} = ${fmtG(v.gE)} g/(m²h)
+M<sub>ev</sub> = t<sub>ev</sub> · (g<sub>i</sub> + g<sub>e</sub>) = <span class="erg">${fmtM(F.mev)} kg/m²</span>`;
+    } else if (v.fall === 3) {
+      rw += `g<sub>ev1</sub> = δ<sub>0</sub> · (p<sub>c</sub> − p<sub>i</sub>) / s<sub>d,c1</sub> = ${fmtG(v.gI)} g/(m²h),  t<sub>ev1</sub> = M<sub>c1</sub> / g<sub>ev1</sub> = ${h(v.t1)} h
+g<sub>ev2</sub> = δ<sub>0</sub> · (p<sub>c</sub> − p<sub>e</sub>) / (s<sub>d,T</sub> − s<sub>d,c2</sub>) = ${fmtG(v.gE)} g/(m²h),  t<sub>ev2</sub> = M<sub>c2</sub> / g<sub>ev2</sub> = ${h(v.t2)} h\n`;
+      rw += v.variante === 'beide'
+        ? `t<sub>ev1</sub> und t<sub>ev2</sub> > t<sub>ev</sub>: M<sub>ev</sub> = (g<sub>ev1</sub> + g<sub>ev2</sub>) · t<sub>ev</sub>`
+        : v.variante === 't1'
+        ? `t<sub>ev1</sub> < t<sub>ev2</sub>: Ebene 1 ist zuerst trocken, danach verdunstet Ebene 2 auch nach innen
+M<sub>ev</sub> = g<sub>ev1</sub>·t<sub>ev1</sub> + g<sub>ev2</sub>·t<sub>ev1</sub> + (δ<sub>0</sub>·(p<sub>c2</sub> − p<sub>i</sub>)/s<sub>d,c2</sub> + g<sub>ev2</sub>) · (t<sub>ev</sub> − t<sub>ev1</sub>)`
+        : `t<sub>ev2</sub> < t<sub>ev1</sub>: Ebene 2 ist zuerst trocken, danach verdunstet Ebene 1 auch nach außen
+M<sub>ev</sub> = g<sub>ev2</sub>·t<sub>ev2</sub> + g<sub>ev1</sub>·t<sub>ev2</sub> + (g<sub>ev1</sub> + δ<sub>0</sub>·(p<sub>c1</sub> − p<sub>e</sub>)/(s<sub>d,T</sub> − s<sub>d,c1</sub>)) · (t<sub>ev</sub> − t<sub>ev2</sub>)`;
+      rw += ` = <span class="erg">${fmtM(F.mev)} kg/m²</span>`;
+    } else {
+      rw += `s<sub>d,c,m</sub> = s<sub>d,c1</sub> + 0,5 · (s<sub>d,c2</sub> − s<sub>d,c1</sub>) = ${fmtSd(v.xA)} + 0,5 · (${fmtSd(v.xB)} − ${fmtSd(v.xA)}) = ${fmtSd(v.xm)} m
+M<sub>ev</sub> = δ<sub>0</sub> · ((p<sub>c</sub> − p<sub>i</sub>) / s<sub>d,c,m</sub> + (p<sub>c</sub> − p<sub>e</sub>) / (s<sub>d,T</sub> − s<sub>d,c,m</sub>)) · t<sub>ev</sub> = <span class="erg">${fmtM(F.mev)} kg/m²</span>`;
+    }
+    if (F.holz.length) {
+      rw += `\n\n<strong>Zulässige Tauwassermasse bei Holz/Holzwerkstoffen</strong>\n`;
+      F.holz.forEach(hz => {
+        rw += `${esc(hz.name)}: ${Math.round(hz.anteil * 100)} % · d · ρ = ${String(hz.anteil).replace('.', ',')} · ${fmtR(hz.d)} · ${hz.rho} = ${fmtM(hz.grenze)} kg/m²\n`;
+      });
+      rw += `zul. M<sub>c</sub> = min(1,0; ${F.holz.map(hz => fmtM(hz.grenze)).join('; ')}) = <span class="erg">${fmtM(F.mcGrenze)} kg/m²</span>`;
+    }
   }
 
   const cls = F.ok ? 'ok' : 'nok', sym = F.ok ? '✓' : '✗';
   const urteil = !F.tauwasser ? 'Kein Tauwasser im Bauteil'
     : `Tauwasser m<sub>c</sub> = ${fmtM(F.mc)} kg/m² – ${F.ok ? 'zulässig' : 'NICHT zulässig'}`;
   const detail = !F.tauwasser ? 'Nachweis erfüllt'
-    : `m<sub>c</sub> ${F.okMc ? '≤' : '>'} ${fmtM(G.mcMax)} kg/m², m<sub>ev</sub> = ${fmtM(F.mev)} kg/m² ${F.okEv ? '≥' : '<'} m<sub>c</sub>`;
+    : `M<sub>c</sub> ${F.okMc ? '≤' : '>'} zul. M<sub>c</sub> = ${fmtM(F.mcGrenze)} kg/m², M<sub>ev</sub> = ${fmtM(F.mev)} kg/m² ${F.okEv ? '≥' : '<'} M<sub>c</sub>`;
 
   return `<div class="karte">${titel}
     <p class="hinweis">Tauperiode ${T.stunden} h: innen ${fmtT(T.ti)} °C / ${Math.round(T.phiI*100)} %, außen ${fmtT(T.te)} °C / ${Math.round(T.phiE*100)} %; R<sub>si</sub> = ${fmtR(G.rsi)}, R<sub>se</sub> = ${fmtR(G.rse)} m²K/W; δ<sub>0</sub> = 2,0·10⁻¹⁰ kg/(m·s·Pa). Unabhängig von θ<sub>i</sub>/θ<sub>e</sub> oben.</p>
@@ -738,11 +777,11 @@ m<sub>ev</sub> = t<sub>ev</sub> · (g<sub>i</sub> + g<sub>e</sub>) = <span class
     <p class="hinweis klein">θ und p<sub>sat</sub> jeweils an der äußeren Grenzfläche der Schicht (Tauperiode).</p>
     <div class="rechenweg">${rw}</div>
     <div class="ampel ${cls}" style="margin-top:12px"><div class="licht">${sym}</div><div>${urteil}<br><small>${detail}</small></div></div>
-    ${F.tauwasser ? `<p class="hinweis klein" style="margin-top:8px">Grenzwert 0,5 kg/m², wenn die Tauwasserebene an einer nicht kapillar wasseraufnahmefähigen Schicht liegt (z.B. Folie, Mineralwolle). Bei Holz zusätzlich Massezunahme ≤ 5 % (Holzwerkstoffe ≤ 3 %) prüfen.</p>` : ''}
+    ${F.tauwasser ? `<p class="hinweis klein" style="margin-top:8px">Grenzwert 0,5 kg/m², wenn die Tauwasserebene an einer kapillar nicht wasseraufnahmefähigen Schicht liegt (z.B. Folie, Mineralwolle) – bitte selbst prüfen. Holz (5 %) und Holzwerkstoffe (3 %) aus der Auswahlliste rechnet die App automatisch ein, eigene Holzbaustoffe nicht.</p>` : ''}
     ${e.inhomErg ? '<p class="hinweis klein">Inhomogene Schicht: Nachweis im Gefachbereich (Baustoff aus der Schichttabelle).</p>' : ''}
     <p class="hinweis klein"><strong>μ-Wahl nach Tafel 4.29a:</strong> Bei Stoffen mit zwei μ-Werten (z.B. 15/35) wählt die App automatisch den Wert, der die Tauwassermenge M<sub>c</sub> maximiert – vor dem Taupunkt (min), dahinter (max). Dieselben Werte gelten für die Verdunstungsperiode. Wer in der Spalte μ einen eigenen Wert einträgt, behält diesen.</p>
     <p class="hinweis klein">Randbedingungen: Schneider 26, Tafel 4.29b und 4.4a; Grenzwerte Abschnitt 3.5.1. Ab 01.01.2027 verweist § 11 GModG auf DIN 4108-3:2024-03 (Änderungen nicht geprüft).</p>
-    <p class="pruefen">δ<sub>0</sub> = 2,0·10⁻¹⁰ kg/(m·s·Pa) aus dem Gedächtnis – gegen Schneider 26, Tafel 4.30 prüfen!</p>
+    <p class="hinweis klein">δ<sub>0</sub> = 2·10⁻¹⁰ kg/(m·s·Pa) und Formeln nach Schneider 26, Abschn. 3.2 und Tafel 4.30.</p>
   </div>`;
 }
 
@@ -808,7 +847,7 @@ function htmlZusammenfassung(e) {
          ? `Gegenüber dem Referenzgebäude des GModG (U<sub>Ref</sub> = ${fmtU(e.gmodg.umax)}) ist das Bauteil <strong>${e.gmodg.ok ? 'gleich gut oder besser' : 'schlechter'}</strong>.`
          : e.gmodg.keineAnforderung ? 'Das GModG stellt an diese Maßnahme in dieser Temperaturzone keine Anforderung.'
          : `Die Anforderung des GModG (§ 36, Anlage 7 Nr. ${e.gmodg.zeile.id}: U<sub>max</sub> = ${fmtU(e.gmodg.umax)}) ist <strong>${e.gmodg.ok ? 'erfüllt' : 'NICHT erfüllt'}</strong>.`}
-       Der Schimmelnachweis in der Fläche ist <strong>${e.schimmel.ok ? 'erfüllt' : 'NICHT erfüllt'}</strong> (f<sub>Rsi</sub> = ${fmtR(e.schimmel.fRsi)}).
+       Der Schimmelnachweis in der Fläche ist <strong>${e.schimmel.ok ? 'erfüllt' : 'NICHT erfüllt'}</strong> (θ<sub>si</sub> = ${fmtT(e.schimmel.thetaSi)} °C, Schwelle ${fmtT(e.schimmel.thetaMin)} °C).
        ${e.feuchte.muFehlt ? 'Der Tauwassernachweis wurde nicht geführt (μ fehlt).'
          : !e.feuchte.tauwasser ? 'Im Bauteil fällt nach Glaser <strong>kein Tauwasser</strong> aus.'
          : `Im Bauteil fallen nach Glaser <strong>${fmtM(e.feuchte.mc)} kg/m² Tauwasser</strong> aus – das ist <strong>${e.feuchte.ok ? 'zulässig' : 'NICHT zulässig'}</strong>.`}</p>
