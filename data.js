@@ -19,15 +19,47 @@ const LUFT_R = {
 };
 
 // Bauteiltypen mit Standard-Wärmestromrichtung
+// anl7: passende Zeilen der GModG-Anlage 7 (erste = Vorauswahl), refKey: Referenzgebäude Anlage 1
 const BAUTEILE = [
-  { id:'aussenwand',         label:'Außenwand',                               richtung:'horizontal', rminKey:'aussenwand' },
-  { id:'steildach',          label:'Steildach',                               richtung:'aufwaerts',  rminKey:'dach' },
-  { id:'flachdach',          label:'Flachdach',                               richtung:'aufwaerts',  rminKey:'dach' },
-  { id:'decke_aussen_oben',  label:'Decke gegen Außenluft (Wärmestrom ↑)',richtung:'aufwaerts',  rminKey:'decke_aussen' },
-  { id:'decke_aussen_unten', label:'Decke gegen Außenluft (Wärmestrom ↓)',richtung:'abwaerts',   rminKey:'decke_aussen' },
-  { id:'decke_unbeheizt',    label:'Decke unter nicht ausg. Dachraum',        richtung:'aufwaerts',  rminKey:'decke_unbeheizt' },
-  { id:'kellerdecke',        label:'Kellerdecke / gegen Erdreich',            richtung:'abwaerts',   rminKey:'kellerdecke' }
+  { id:'aussenwand',         label:'Außenwand',                               richtung:'horizontal', rminKey:'aussenwand',      anl7:['1b','1a'],      refKey:'aussenwand' },
+  { id:'steildach',          label:'Steildach',                               richtung:'aufwaerts',  rminKey:'dach',            anl7:['5b','5a'],      refKey:'dach' },
+  { id:'flachdach',          label:'Flachdach',                               richtung:'aufwaerts',  rminKey:'dach',            anl7:['5c','5a'],      refKey:'dach' },
+  { id:'decke_aussen_oben',  label:'Decke gegen Außenluft (Wärmestrom ↑)',richtung:'aufwaerts',  rminKey:'decke_aussen',    anl7:['5a'],           refKey:'aussenwand' },
+  { id:'decke_aussen_unten', label:'Decke gegen Außenluft (Wärmestrom ↓)',richtung:'abwaerts',   rminKey:'decke_aussen',    anl7:['6e','6d','6c'], refKey:'aussenwand' },
+  { id:'decke_unbeheizt',    label:'Decke unter nicht ausg. Dachraum',        richtung:'aufwaerts',  rminKey:'decke_unbeheizt', anl7:['5a'],           refKey:'dach' },
+  { id:'kellerdecke',        label:'Kellerdecke / gegen Erdreich',            richtung:'abwaerts',   rminKey:'kellerdecke',     anl7:['6b','6a','6c'], refKey:'erdreich' }
 ];
+
+// Gebäudemodernisierungsgesetz (GModG) – Z (zitiert aus der nichtamtlichen Lesefassung,
+// gesetze-im-internet.de/geg, gültig 29.07.–31.12.2026; Stand ab 01.01.2027 nicht geprüft!)
+// § 36 mit Anlage 7: Höchstwerte U_max [W/(m²K)] bei Änderung bestehender Gebäude.
+// hoch = Wohngebäude bzw. Zonen ≥ 19 °C, niedrig = Zonen 12 bis < 19 °C (null = keine Anforderung)
+const GMODG = {
+  stand: 'GModG, nichtamtliche Lesefassung gültig 29.07.–31.12.2026',
+  anl7: [
+    { id:'1a', text:'Außenwand – Ersatz oder erstmaliger Einbau',                                        hoch:0.24, niedrig:0.35, fn:[] },
+    { id:'1b', text:'Außenwand – außenseitige Dämmung, Bekleidung oder neuer Außenputz',                  hoch:0.24, niedrig:0.35, fn:[2] },
+    { id:'5a', text:'Dach, oberste Geschossdecke, Abseitenwand – Ersatz oder erstmaliger Einbau',          hoch:0.24, niedrig:0.35, fn:[] },
+    { id:'5b', text:'Dach – neue Dachdeckung oder Bekleidung/Dämmung auf der Kaltseite',                  hoch:0.24, niedrig:0.35, fn:[1,5] },
+    { id:'5c', text:'Dach mit Abdichtung (Flachdach) – Ersatz der Abdichtung',                             hoch:0.20, niedrig:0.35, fn:[1,5] },
+    { id:'6a', text:'Wand/Decke gegen Erdreich oder unbeheizte Räume – Ersatz oder erstmaliger Einbau',    hoch:0.30, niedrig:null, fn:[] },
+    { id:'6b', text:'Wand/Decke gegen Erdreich oder unbeheizt – Bekleidung/Dämmung auf der Kaltseite',     hoch:0.30, niedrig:null, fn:[1,5] },
+    { id:'6c', text:'Decke nach unten – Fußbodenaufbau auf der beheizten Seite',                           hoch:0.50, niedrig:null, fn:[1,5] },
+    { id:'6d', text:'Decke nach unten zur Außenluft – Ersatz oder erstmaliger Einbau',                     hoch:0.24, niedrig:0.35, fn:[1] },
+    { id:'6e', text:'Decke nach unten zur Außenluft – Bekleidung/Dämmung erneuert',                        hoch:0.24, niedrig:0.35, fn:[1,5] },
+  ],
+  fussnoten: {
+    1: 'Bei technisch begrenzter Dämmschichtdicke gilt die Anforderung als erfüllt, wenn die höchstmögliche Dämmschichtdicke mit λ = 0,035 W/(mK) eingebaut wird (eingeblasene Dämmstoffe in Hohlräume und nachwachsende Rohstoffe: λ = 0,045 W/(mK)).',
+    2: 'Entfällt, wenn die Außenwand nach dem 31.12.1983 unter energiesparrechtlichen Vorschriften errichtet oder erneuert wurde.',
+    5: 'Entfällt, wenn die Bauteilfläche nach dem 31.12.1983 unter energiesparrechtlichen Vorschriften errichtet oder erneuert wurde.'
+  },
+  // Anlage 1: Referenzgebäude (Wohngebäude), U-Werte nur zur Orientierung – Nachweis über H'T (§ 16)
+  ref: {
+    aussenwand: { u:0.28, text:'Außenwand, Geschossdecke gegen Außenluft' },
+    dach:       { u:0.20, text:'Dach, oberste Geschossdecke, Wände zu Abseiten' },
+    erdreich:   { u:0.35, text:'Bauteile gegen Erdreich oder unbeheizte Räume, Bodenplatte' }
+  }
+};
 
 // Mindest-Wärmedurchlasswiderstände R_min [m²K/W] – R ohne R_si/R_se
 // DIN 4108-2, Tabelle 3 – G (2026-05-Werte: Platzhalter = 2013er, unbedingt prüfen!)

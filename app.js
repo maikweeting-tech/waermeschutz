@@ -22,7 +22,10 @@ document.addEventListener('DOMContentLoaded', () => {
   sel.addEventListener('change', () => {
     const bt = BAUTEILE.find(b => b.id === sel.value);
     if (bt) $('richtung').value = bt.richtung;
+    fuelleAnl7();
   });
+  $('gmodg-fall').addEventListener('change', () => fuelleAnl7($('gmodg-zeile').value));
+  fuelleAnl7();
 
   // Toggle-Felder
   $('bef-aktiv').addEventListener('change', e => $('bef-felder').hidden = !e.target.checked);
@@ -75,6 +78,21 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
+// ── GModG: passende Anlage-7-Zeilen zum Bauteil ───────────────
+function fuelleAnl7(wunsch) {
+  const bt = BAUTEILE.find(b => b.id === $('bauteil').value);
+  const z = $('gmodg-zeile');
+  z.innerHTML = '';
+  (bt ? bt.anl7 : []).forEach(id => {
+    const r = GMODG.anl7.find(x => x.id === id);
+    const o = document.createElement('option');
+    o.value = id; o.textContent = `Nr. ${id}: ${r.text}`;
+    z.appendChild(o);
+  });
+  if (wunsch && [...z.options].some(o => o.value === wunsch)) z.value = wunsch;
+  $('gmodg-zeile-feld').hidden = $('gmodg-fall').value !== 'bestand';
+}
+
 // ── Schichtenverwaltung ───────────────────────────────────────
 let _stoffHtml = '';
 function stoffOptionen() {
@@ -124,10 +142,11 @@ function addSchicht() {
 // ── Zustand speichern / laden (Beispiele, Teilen-Link) ────────
 const FELDER = ['bauteil','raum','richtung','theta-i','theta-e','din-ausgabe','lu-stufe','lu-schicht',
   'bef-aktiv','bef-nf','bef-dm','bef-lambda','bef-voll','bef-schicht','delta-ur',
-  'inhom-aktiv','inhom-nr','inhom-name','inhom-lambda','inhom-fa','inhom-fb'];
+  'inhom-aktiv','inhom-nr','inhom-name','inhom-lambda','inhom-fa','inhom-fb','gmodg-fall','gmodg-zeile'];
 const STANDARD = { raum:'normal', 'theta-i':'20', 'theta-e':'-5', 'din-ausgabe':'2013-02', 'lu-stufe':'0', 'lu-schicht':'',
   'bef-aktiv':false, 'bef-nf':'', 'bef-dm':'', 'bef-lambda':'', 'bef-voll':true, 'bef-schicht':'', 'delta-ur':'0',
-  'inhom-aktiv':false, 'inhom-nr':'', 'inhom-name':'', 'inhom-lambda':'', 'inhom-fa':'', 'inhom-fb':'' };
+  'inhom-aktiv':false, 'inhom-nr':'', 'inhom-name':'', 'inhom-lambda':'', 'inhom-fa':'', 'inhom-fb':'',
+  'gmodg-fall':'bestand', 'gmodg-zeile':'' };
 
 function zustand() {
   const f = {};
@@ -142,6 +161,7 @@ function ladeZustand(z) {
     const el = $(id);
     if (el.type === 'checkbox') el.checked = !!z.f[id]; else el.value = z.f[id];
   });
+  fuelleAnl7(z.f['gmodg-zeile']);
   $('bef-felder').hidden = !$('bef-aktiv').checked;
   $('inhom-felder').hidden = !$('inhom-aktiv').checked;
   $('det-korr').open = $('lu-stufe').value !== '0' || $('bef-aktiv').checked || (nr($('delta-ur')) || 0) !== 0;
@@ -167,7 +187,7 @@ function ladeZustand(z) {
 
 function beispielZustand(b) {
   const bt = BAUTEILE.find(x => x.id === b.f.bauteil);
-  const f = { ...STANDARD, richtung: bt ? bt.richtung : 'horizontal', ...b.f };
+  const f = { ...STANDARD, 'gmodg-fall': $('gmodg-fall').value, richtung: bt ? bt.richtung : 'horizontal', ...b.f };
   const s = b.s.map(([typ, stoff, name, d]) => {
     const st = BAUSTOFFE.flatMap(g => g.stoffe).find(x => x.name === stoff);
     return [typ, stoff, name, String(d), st ? String(st.lambda) : '', st ? 'Schneider 26' : '', st ? String(st.mu) : (typ === 'luft_ruhend' ? '1' : '')];
@@ -311,8 +331,9 @@ function berechnen() {
   const bt = BAUTEILE.find(b => b.id === bauteilId);
   const muFehlt = schichten.filter(s => !(s.mu > 0)).map(s => s.name || '?');
   const feuchte = muFehlt.length ? { muFehlt } : { ...glaser(schichten, richtung, bt && bt.rminKey === 'dach'), schichten };
+  const gmodg = pruefeGModG($('gmodg-fall').value, bauteilId, $('gmodg-zeile').value, raum, U);
 
-  zeigeErgebnis({ sR, rsi, rse, RT, U0, dg, df, dUr, dU, U, Rvorh, temp, minErg, schimmel, feuchte, plaus, ti, te, richtung, bauteilId, raum, din, inhomErg });
+  zeigeErgebnis({ sR, rsi, rse, RT, U0, dg, df, dUr, dU, U, Rvorh, temp, minErg, gmodg, schimmel, feuchte, plaus, ti, te, richtung, bauteilId, raum, din, inhomErg });
 }
 
 // ── Ergebnisanzeige ───────────────────────────────────────────
@@ -327,6 +348,7 @@ function zeigeErgebnis(e) {
     htmlRechenweg(e) +
     htmlTemperatur(e) +
     htmlNachweis(e) +
+    htmlGModG(e) +
     htmlSchimmel(e) +
     htmlGlaser(e) +
     htmlPlaus(e) +
@@ -549,7 +571,48 @@ function htmlNachweis(e) {
   </div>`;
 }
 
-// 5 – Schimmelnachweis f_Rsi
+// 5 – Anforderung GModG
+function htmlGModG(e) {
+  const g = e.gmodg;
+  if (!g) return '';
+  const cls = g.ok ? 'ok' : 'nok', sym = g.ok ? '✓' : '✗';
+  const stand = `<p class="hinweis klein" style="margin-top:8px">Quelle: ${esc(GMODG.stand)}. Ob sich ab 01.01.2027 (Artikel 2) etwas an diesen Werten ändert, ist <strong>nicht geprüft</strong>.</p>`;
+  const uZeile = `U = ${fmtU(g.U)} W/(m²K) (inkl. Korrekturwerte ΔU, auf 2 Stellen gerundet)`;
+
+  if (g.fall === 'neubau') {
+    return `<div class="karte">
+      <p class="erg-titel">5 – GModG Neubau: Vergleich mit dem Referenzgebäude (Anlage 1)</p>
+      <div class="rechenweg">${uZeile}
+U<sub>Ref</sub> = ${fmtU(g.umax)} W/(m²K) – ${esc(g.text)}
+U ${g.ok ? '≤' : '>'} U<sub>Ref</sub> → <span class="erg">${g.ok ? 'besser als oder gleich dem Referenzbauteil' : 'schlechter als das Referenzbauteil'}</span></div>
+      <div class="ampel ${cls}" style="margin-top:12px"><div class="licht">${sym}</div><div>${g.ok ? 'Bauteil erreicht den Referenzwert' : 'Bauteil verfehlt den Referenzwert'}<br><small>nur Orientierung – kein Bauteilnachweis</small></div></div>
+      <div class="hinweis-box">Für Neubauten gibt es <strong>keinen Grenzwert je Bauteil</strong>. Nachgewiesen wird das ganze Gebäude: Der Transmissionswärmeverlust H'<sub>T</sub> darf das 1,0-Fache des Referenzgebäudes nicht überschreiten (§ 16 mit § 15 Abs. 1). Ein Bauteil schlechter als die Referenz kann durch bessere Bauteile ausgeglichen werden.</div>
+      ${stand}
+    </div>`;
+  }
+
+  const z = g.zeile;
+  const fn = z.fn.map(n => `<li><strong>Fußnote ${n}:</strong> ${esc(GMODG.fussnoten[n])}</li>`).join('');
+  const rw = g.keineAnforderung
+    ? `${uZeile}\nAnlage 7, Nr. ${z.id}, Zonen ${g.zone}: <span class="erg">keine Anforderung</span>`
+    : `${uZeile}\nU<sub>max</sub> = ${fmtU(g.umax)} W/(m²K) (Anlage 7, Nr. ${z.id}, Zonen ${g.zone})\nU = ${fmtU(g.Ur)} ${g.ok ? '≤' : '>'} U<sub>max</sub> = ${fmtU(g.umax)} → <span class="erg">${g.ok ? 'erfüllt' : 'NICHT erfüllt'}</span>`;
+  return `<div class="karte">
+    <p class="erg-titel">5 – GModG: Änderung im Bestand (§ 36 mit Anlage 7)</p>
+    <p><strong>Nr. ${z.id}:</strong> ${esc(z.text)}</p>
+    <div class="rechenweg">${rw}</div>
+    <div class="ampel ${cls}" style="margin-top:12px"><div class="licht">${sym}</div><div>Anforderung GModG ${g.keineAnforderung ? 'entfällt' : g.ok ? 'erfüllt' : 'NICHT erfüllt'}<br><small>${g.keineAnforderung ? 'für Zonen ' + g.zone + ' keine Anforderung' : `U = ${fmtU(g.Ur)} ${g.ok ? '≤' : '>'} U<sub>max</sub> = ${fmtU(g.umax)} W/(m²K)`}</small></div></div>
+    <div class="hinweis-box"><strong>Ausnahmen:</strong>
+      <ul style="margin:4px 0 0;padding-left:1.2em">
+        <li><strong>Bagatellgrenze (§ 36 Satz 2):</strong> keine Anforderung, wenn höchstens 10 % der Fläche der jeweiligen Bauteilgruppe des Gebäudes geändert werden.</li>
+        ${fn}
+        ${z.id.startsWith('1') ? '<li><strong>Innendämmung</strong> ist in Anlage 7 nicht eigens aufgeführt – die Zuordnung (Nr. 1a/1b) bitte im Einzelfall klären.</li>' : ''}
+      </ul>
+    </div>
+    ${stand}
+  </div>`;
+}
+
+// 6 – Schimmelnachweis f_Rsi
 function htmlSchimmel(e) {
   const m = e.schimmel;
   const cls = m.ok ? 'ok' : 'nok', sym = m.ok ? '✓' : '✗';
@@ -557,7 +620,7 @@ function htmlSchimmel(e) {
 f<sub>Rsi</sub> = 1 − R<sub>si</sub> / R'<sub>T</sub> = 1 − ${fmtR(m.rsi)} / ${fmtR(m.RT)} = <span class="erg">${fmtR(m.fRsi)}</span> ${m.ok ? '≥' : '<'} ${fmtEta(m.fmin)}
 θ<sub>si</sub> = θ<sub>e</sub> + f<sub>Rsi</sub> · (θ<sub>i</sub> − θ<sub>e</sub>) = ${fmtT(m.te)} + ${fmtR(m.fRsi)} · (${fmtT(m.ti)} − (${fmtT(m.te)})) = <span class="erg">${fmtT(m.thetaSi)} °C</span> ${m.thetaSi >= m.thetaMin ? '≥' : '<'} ${fmtT(m.thetaMin)} °C`;
   return `<div class="karte">
-    <p class="erg-titel">5 – Schimmelnachweis (Temperaturfaktor f<sub>Rsi</sub>)</p>
+    <p class="erg-titel">6 – Schimmelnachweis (Temperaturfaktor f<sub>Rsi</sub>)</p>
     <p class="hinweis">Norm-Randbedingungen nach DIN 4108-2: θ<sub>i</sub> = ${fmtT(m.ti)} °C, φ<sub>i</sub> = ${m.phi} %, θ<sub>e</sub> = ${fmtT(m.te)} °C, erhöhter R<sub>si</sub> = ${fmtR(m.rsi)} m²K/W. Unabhängig von θ<sub>i</sub>/θ<sub>e</sub> oben.</p>
     <div class="rechenweg">${rw}</div>
     <div class="ampel ${cls}" style="margin-top:12px">
@@ -576,7 +639,7 @@ function htmlPlaus(e) {
   e.plaus.forEach(p => {
     items += `<div class="check-item"><div class="check-dot ${p.ok ? 'ok' : 'warn'}"></div><div>${esc(p.text)}<br><span class="klein hinweis">${esc(p.hinweis)}</span></div></div>`;
   });
-  return `<div class="karte"><p class="erg-titel">7 – Plausibilitätscheck</p>${items}</div>`;
+  return `<div class="karte"><p class="erg-titel">8 – Plausibilitätscheck</p>${items}</div>`;
 }
 
 // 6 – Feuchteschutz: Glaser-Verfahren
@@ -587,7 +650,7 @@ const fmtG = v => (v * 3600 * 1000).toFixed(3).replace('.', ',');   // kg/(m²s)
 
 function htmlGlaser(e) {
   const F = e.feuchte, G = GLASER, T = G.tau, V = G.verd;
-  const titel = '<p class="erg-titel">6 – Feuchteschutz: Tauwasser im Bauteil (Glaser-Verfahren, DIN 4108-3)</p>';
+  const titel = '<p class="erg-titel">7 – Feuchteschutz: Tauwasser im Bauteil (Glaser-Verfahren, DIN 4108-3)</p>';
   if (F.muFehlt) return `<div class="karte">${titel}<p class="hinweis">Für den Tauwassernachweis fehlt μ bei: ${F.muFehlt.map(esc).join(', ')}.</p></div>`;
 
   const name = k => esc(F.schichten[k].name || 'Schicht ' + (k+1));
@@ -708,8 +771,12 @@ function htmlZusammenfassung(e) {
     <p class="erg-titel">Zusammenfassung</p>
     <p>Das Bauteil <strong>${esc(bt ? bt.label : '')}</strong> erreicht einen Wärmedurchgangskoeffizienten von
        <strong>U = ${fmtU(e.U)} W/(m²K)</strong>.
-       Der winterliche Mindestwärmeschutz nach DIN 4108-2 ist <strong>${minOk}</strong>,
-       der Schimmelnachweis in der Fläche ist <strong>${e.schimmel.ok ? 'erfüllt' : 'NICHT erfüllt'}</strong> (f<sub>Rsi</sub> = ${fmtR(e.schimmel.fRsi)}).
+       Der winterliche Mindestwärmeschutz nach DIN 4108-2 ist <strong>${minOk}</strong>.
+       ${!e.gmodg ? '' : e.gmodg.fall === 'neubau'
+         ? `Gegenüber dem Referenzgebäude des GModG (U<sub>Ref</sub> = ${fmtU(e.gmodg.umax)}) ist das Bauteil <strong>${e.gmodg.ok ? 'gleich gut oder besser' : 'schlechter'}</strong>.`
+         : e.gmodg.keineAnforderung ? 'Das GModG stellt an diese Maßnahme in dieser Temperaturzone keine Anforderung.'
+         : `Die Anforderung des GModG (§ 36, Anlage 7 Nr. ${e.gmodg.zeile.id}: U<sub>max</sub> = ${fmtU(e.gmodg.umax)}) ist <strong>${e.gmodg.ok ? 'erfüllt' : 'NICHT erfüllt'}</strong>.`}
+       Der Schimmelnachweis in der Fläche ist <strong>${e.schimmel.ok ? 'erfüllt' : 'NICHT erfüllt'}</strong> (f<sub>Rsi</sub> = ${fmtR(e.schimmel.fRsi)}).
        ${e.feuchte.muFehlt ? 'Der Tauwassernachweis wurde nicht geführt (μ fehlt).'
          : !e.feuchte.tauwasser ? 'Im Bauteil fällt nach Glaser <strong>kein Tauwasser</strong> aus.'
          : `Im Bauteil fallen nach Glaser <strong>${fmtM(e.feuchte.mc)} kg/m² Tauwasser</strong> aus – das ist <strong>${e.feuchte.ok ? 'zulässig' : 'NICHT zulässig'}</strong>.`}</p>

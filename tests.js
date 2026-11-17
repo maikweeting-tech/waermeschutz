@@ -108,6 +108,23 @@ pruefe('Innendämmung: Tauwasser zwischen MW und Ziegel', gI.ebenen.map(e => e.k
 pruefe('Innendämmung: nicht zulässig', gI.ok, false);
 pruefe('Innendämmung: m_ev < m_c', gI.okEv, false);
 
+// ── GModG (§ 36 / Anlage 7, Anlage 1) ──
+pruefe('GModG: KS + WDVS U = 0,23 ≤ 0,24 (Nr. 1b)', pruefeGModG('bestand', 'aussenwand', '1b', 'normal', 1 / RTw).ok, true);
+pruefe('GModG: Vorauswahl Außenwand ist Nr. 1b', pruefeGModG('bestand', 'aussenwand', '', 'normal', 0.3).zeile.id, '1b');
+pruefe('GModG: Altbau U = 1,99 > 0,24', pruefeGModG('bestand', 'aussenwand', '1a', 'normal', 1.99).ok, false);
+pruefe('GModG: Flachdach Nr. 5c U_max = 0,20', pruefeGModG('bestand', 'flachdach', '5c', 'normal', 0.2).umax, 0.20);
+pruefe('GModG: Grenzfall 0,2449 → gerundet 0,24 ≤ 0,24', pruefeGModG('bestand', 'aussenwand', '1b', 'normal', 0.2449).ok, true);
+pruefe('GModG: 0,2451 → gerundet 0,25 > 0,24', pruefeGModG('bestand', 'aussenwand', '1b', 'normal', 0.2451).ok, false);
+pruefe('GModG: Zone 12–19 °C Außenwand U_max = 0,35', pruefeGModG('bestand', 'aussenwand', '1b', 'niedrig', 0.3).umax, 0.35);
+pruefe('GModG: Kellerdecke Zone 12–19 °C → keine Anforderung', pruefeGModG('bestand', 'kellerdecke', '6b', 'niedrig', 2).keineAnforderung, true);
+pruefe('GModG: Kellerdecke Nr. 6c (Fußbodenaufbau warm) U_max = 0,50', pruefeGModG('bestand', 'kellerdecke', '6c', 'normal', 0.4).umax, 0.50);
+pruefe('GModG: fremde Zeile wird durch Vorauswahl ersetzt', pruefeGModG('bestand', 'steildach', '1a', 'normal', 0.2).zeile.id, '5b');
+pruefe('GModG Neubau: Referenz Außenwand 0,28', pruefeGModG('neubau', 'aussenwand', '', 'normal', 0.23).umax, 0.28);
+pruefe('GModG Neubau: Referenz Dach 0,20, U 0,16 besser', pruefeGModG('neubau', 'steildach', '', 'normal', 0.16).ok, true);
+pruefe('GModG: keine Prüfung → null', pruefeGModG('keine', 'aussenwand', '', 'normal', 0.2), null);
+pruefe('Jedes Bauteil hat gültige Anlage-7-Zeilen und Referenz',
+  BAUTEILE.every(b => b.anl7.length && b.anl7.every(id => GMODG.anl7.some(z => z.id === id)) && GMODG.ref[b.refKey]), true);
+
 // ── Daten ──
 const namen = BAUSTOFFE.flatMap(g => g.stoffe.map(s => s.name));
 pruefe('Baustoffnamen eindeutig', new Set(namen).size, namen.length);

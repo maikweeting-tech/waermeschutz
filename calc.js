@@ -126,6 +126,22 @@ function pruefeMin(bauteilId, raum, Rvorh, din) {
   return { rmin:ref.rmin, Rvorh, eta, ok: Rvorh >= ref.rmin, text:ref.text, zeile:ref.zeile, din };
 }
 
+// ── GModG: § 36 / Anlage 7 (Bestand) bzw. Referenzgebäude Anlage 1 (Neubau) ─
+function pruefeGModG(fall, bauteilId, zeileId, raum, U) {
+  if (fall === 'keine') return null;
+  const bt = BAUTEILE.find(b => b.id === bauteilId);
+  if (!bt) return null;
+  const Ur = Math.round(U * 100) / 100;   // Vergleich mit dem auf 2 Stellen gerundeten U-Wert
+  if (fall === 'neubau') {
+    const r = GMODG.ref[bt.refKey];
+    return { fall, U, Ur, umax: r.u, text: r.text, ok: Ur <= r.u };
+  }
+  const z = GMODG.anl7.find(x => x.id === zeileId && bt.anl7.includes(x.id)) || GMODG.anl7.find(x => x.id === bt.anl7[0]);
+  const umax = raum === 'niedrig' ? z.niedrig : z.hoch;
+  return { fall, U, Ur, umax, zeile: z, zone: raum === 'niedrig' ? '12 bis < 19 °C' : '≥ 19 °C',
+           keineAnforderung: umax === null, ok: umax === null || Ur <= umax };
+}
+
 // ── Schimmelnachweis f_Rsi (Norm-Randbedingungen, R_si = 0,25) ─
 function pruefeSchimmel(R) {
   const S = SCHIMMEL;
