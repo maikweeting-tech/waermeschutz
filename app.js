@@ -38,6 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   $('schichten').addEventListener('change', e => {
     if (e.target.classList.contains('typ-sel')) onTyp(e.target);
+    if (e.target.classList.contains('s-stoff')) onStoff(e.target);
   });
 
   // Berechnen
@@ -51,13 +52,38 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ── Schichtenverwaltung ───────────────────────────────────────
+let _stoffHtml = '';
+function stoffOptionen() {
+  if (_stoffHtml) return _stoffHtml;
+  let h = '<option value="">— Baustoff wählen —</option>';
+  BAUSTOFFE.forEach(g => {
+    h += `<optgroup label="${esc(g.gruppe)}">`;
+    g.stoffe.forEach(s => {
+      const lf = (s.lambda < 0.1 ? s.lambda.toFixed(3) : s.lambda.toFixed(2)).replace('.', ',');
+      h += `<option value="${esc(s.name)}" data-lambda="${s.lambda}">${esc(s.name)} · λ ${lf}</option>`;
+    });
+    h += '</optgroup>';
+  });
+  return (_stoffHtml = h);
+}
+
+function onStoff(sel) {
+  const tr = sel.closest('tr');
+  const name = tr.querySelector('.s-name');
+  if (!sel.value) { name.hidden = false; name.value = ''; return; }
+  name.hidden = true;
+  name.value = sel.value;
+  tr.querySelector('.s-lambda').value = sel.selectedOptions[0].dataset.lambda;
+  tr.querySelector('.s-quelle').value = 'Schneider 26';
+}
+
 function addSchicht() {
   const tb = $('schichten');
   const tr = document.createElement('tr');
   tr.innerHTML = `
     <td class="zahl nr-zelle"></td>
     <td><select class="typ-sel"><option value="baustoff">Baustoff</option><option value="luft_ruhend">Luftschicht</option></select></td>
-    <td><input type="text" class="s-name" placeholder="z.B. Mauerwerk"></td>
+    <td><select class="s-stoff">${stoffOptionen()}</select><input type="text" class="s-name" placeholder="oder eigener Baustoff"></td>
     <td><input type="number" class="s-d" step="any" min="0" placeholder="cm"></td>
     <td><input type="number" class="s-lambda" step="any" min="0" placeholder="W/(mK)"></td>
     <td><input type="text" class="s-quelle" placeholder="Schneider …"></td>
@@ -71,9 +97,19 @@ function nummeriere() {
 }
 
 function onTyp(sel) {
-  const lam = sel.closest('tr').querySelector('.s-lambda');
-  if (sel.value === 'luft_ruhend') { lam.disabled = true; lam.value = ''; lam.placeholder = '(Tabelle)'; }
-  else { lam.disabled = false; lam.placeholder = 'W/(mK)'; }
+  const tr = sel.closest('tr');
+  const lam = tr.querySelector('.s-lambda');
+  const stoff = tr.querySelector('.s-stoff');
+  const name = tr.querySelector('.s-name');
+  if (sel.value === 'luft_ruhend') {
+    lam.disabled = true; lam.value = ''; lam.placeholder = '(Tabelle)';
+    stoff.hidden = true; stoff.value = '';
+    name.hidden = false; name.value = 'ruhende Luftschicht';
+  } else {
+    lam.disabled = false; lam.placeholder = 'W/(mK)';
+    stoff.hidden = false;
+    if (name.value === 'ruhende Luftschicht') name.value = '';
+  }
 }
 
 // ── Eingaben lesen ────────────────────────────────────────────

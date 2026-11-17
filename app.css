@@ -114,6 +114,8 @@ table.tab { width: 100%; border-collapse: collapse; font-size: .92rem; }
   min-height: 38px; padding: 4px 6px; margin: 0; font-size: .9rem; border-radius: 6px;
 }
 .tab .s-name   { min-width: 120px; }
+.tab .s-stoff  { min-width: 200px; font-size: .82rem; }
+.tab .s-stoff + .s-name:not([hidden]) { margin-top: 4px; }
 .tab .s-d      { width: 72px; }
 .tab .s-lambda { width: 90px; }
 .tab .s-quelle { min-width: 100px; font-size: .82rem; }

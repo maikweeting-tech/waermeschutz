@@ -84,3 +84,58 @@ const U_TYPISCH = {
 
 // Richtungslabels
 const RICHTUNG_LABEL = { horizontal:'horizontal', aufwaerts:'aufwärts', abwaerts:'abwärts' };
+
+// Baustoff-Datenbank mit λ-Bemessungswerten [W/(mK)]
+// Schneider Bautabellen, 26. Auflage – G (aus dem Gedächtnis, prüfen!)
+const BAUSTOFFE = [
+  { gruppe: 'Dämmstoffe', stoffe: [
+    { name: 'Mineralwolle (MW) 035', lambda: 0.035 },
+    { name: 'Mineralwolle (MW) 040', lambda: 0.040 },
+    { name: 'EPS (Styropor) 035', lambda: 0.035 },
+    { name: 'EPS (Styropor) 040', lambda: 0.040 },
+    { name: 'XPS 035', lambda: 0.035 },
+    { name: 'XPS 040', lambda: 0.040 },
+    { name: 'PUR/PIR 024', lambda: 0.024 },
+    { name: 'PUR/PIR 028', lambda: 0.028 },
+    { name: 'Holzfaserdämmplatte (WF) 040', lambda: 0.040 },
+    { name: 'Holzfaserdämmplatte (WF) 045', lambda: 0.045 },
+    { name: 'Zellulose-Einblasdämmung 040', lambda: 0.040 },
+    { name: 'Schaumglas (CG) 050', lambda: 0.050 },
+  ]},
+  { gruppe: 'Mauerwerk', stoffe: [
+    { name: 'Kalksandstein KS 1800', lambda: 0.99 },
+    { name: 'Kalksandstein KS 2000', lambda: 1.10 },
+    { name: 'Porenbeton PP 2-0,35', lambda: 0.09 },
+    { name: 'Porenbeton PP 4-0,55', lambda: 0.16 },
+    { name: 'Hochlochziegel HLz 12-0,7', lambda: 0.70 },
+    { name: 'Vollziegel VMz 1800', lambda: 0.81 },
+    { name: 'Leichtbetonstein Vbl 800', lambda: 0.39 },
+  ]},
+  { gruppe: 'Beton', stoffe: [
+    { name: 'Normalbeton C20/25 (2400)', lambda: 2.10 },
+    { name: 'Stahlbeton (2500)', lambda: 2.30 },
+    { name: 'Leichtbeton 1200', lambda: 0.56 },
+    { name: 'Leichtbeton 1600', lambda: 0.81 },
+  ]},
+  { gruppe: 'Holz / Holzwerkstoffe', stoffe: [
+    { name: 'Nadelholz (Fichte, Kiefer)', lambda: 0.13 },
+    { name: 'KVH / BSH (C24)', lambda: 0.13 },
+    { name: 'Laubholz (Eiche, Buche)', lambda: 0.20 },
+    { name: 'OSB-Platte', lambda: 0.13 },
+    { name: 'Spanplatte', lambda: 0.13 },
+    { name: 'MDF-Platte', lambda: 0.14 },
+  ]},
+  { gruppe: 'Putze / Mörtel / Estriche', stoffe: [
+    { name: 'Kalkzementputz', lambda: 1.00 },
+    { name: 'Kalkputz', lambda: 0.87 },
+    { name: 'Gipsputz', lambda: 0.51 },
+    { name: 'Wärmedämmputz (WDP)', lambda: 0.14 },
+    { name: 'Zementestrich (ZE)', lambda: 1.40 },
+    { name: 'Calciumsulfatestrich (CAF)', lambda: 1.20 },
+  ]},
+  { gruppe: 'Platten / Bekleidungen', stoffe: [
+    { name: 'Gipskartonplatte (GKB)', lambda: 0.25 },
+    { name: 'Gipsfaserplatte (GF)', lambda: 0.32 },
+    { name: 'Faserzementplatte', lambda: 0.58 },
+  ]},
+];
