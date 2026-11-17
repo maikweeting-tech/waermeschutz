@@ -101,14 +101,15 @@ function temperaturverlauf(schichtenR, rsi, rse, RT, ti, te) {
   sR += rsi;
   p.push({ stelle:'Innere Oberfläche θ_si', sR,    theta: ti - q*sR });
 
-  for (let i = 0; i < schichtenR.length; i++) {
+  const n = schichtenR.length;
+  for (let i = 0; i < n; i++) {
     sR += schichtenR[i].R;
-    p.push({ stelle:'nach ' + (schichtenR[i].name || 'Schicht '+(i+1)), sR, theta: ti - q*sR });
+    const nach = 'nach ' + (schichtenR[i].name || 'Schicht '+(i+1));
+    p.push({ stelle: i === n-1 ? nach + ' = äußere Oberfläche θ_se' : nach, sR, theta: ti - q*sR });
   }
 
   sR += rse;
-  p.push({ stelle:'Äußere Oberfläche θ_se', sR, theta: ti - q*sR });
-  p.push({ stelle:'Kontrolle θ_e',          sR: RT, theta: te, kontrolle:true });
+  p.push({ stelle:'Außenluft θ_e (Kontrolle)', sR, theta: ti - q*sR, kontrolle:true });
 
   return { q, punkte:p };
 }
@@ -123,6 +124,15 @@ function pruefeMin(bauteilId, raum, Rvorh, din) {
   if (!ref) return null;
   const eta = ref.rmin / Rvorh;
   return { rmin:ref.rmin, Rvorh, eta, ok: Rvorh >= ref.rmin, text:ref.text, zeile:ref.zeile, din };
+}
+
+// ── Schimmelnachweis f_Rsi (Norm-Randbedingungen, R_si = 0,25) ─
+function pruefeSchimmel(R) {
+  const S = SCHIMMEL;
+  const RT = S.rsi + R + S.rse;
+  const fRsi = 1 - S.rsi / RT;
+  const thetaSi = S.te + fRsi * (S.ti - S.te);
+  return { ...S, R, RT, fRsi, thetaSi, ok: fRsi >= S.fmin };
 }
 
 // ── Plausibilitätschecks ──────────────────────────────────────

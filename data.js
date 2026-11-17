@@ -70,6 +70,11 @@ const R_MIN = {
 // DIN EN ISO 6946:2018-03, Anhang D (Berichtigung 1:2023-04 ggf. beachten) – G
 const DELTA_UG = { 0: 0, 1: 0.01, 2: 0.04 };
 
+// Schimmelnachweis (Mindestwärmeschutz an der inneren Oberfläche)
+// DIN 4108-2, Abschnitt 6.2: f_Rsi ≥ 0,70 bei θ_i = 20 °C, φ_i = 50 %, θ_e = −5 °C,
+// R_si = 0,25 m²K/W (erhöht, Feuchteschutz), R_se = 0,04 m²K/W → θ_si ≥ 12,6 °C – G
+const SCHIMMEL = { rsi: 0.25, rse: 0.04, fmin: 0.70, ti: 20, te: -5, phi: 50, thetaMin: 12.6 };
+
 // α für Befestigungselemente (volle Durchdringung) – G
 const ALPHA_BEF = 0.8;
 
@@ -84,6 +89,26 @@ const U_TYPISCH = {
 
 // Richtungslabels
 const RICHTUNG_LABEL = { horizontal:'horizontal', aufwaerts:'aufwärts', abwaerts:'abwärts' };
+
+// Beispielaufbauten (innen → außen). Schicht: [Typ, Baustoff aus BAUSTOFFE oder '', Name, d in cm]
+const BEISPIELE = [
+  { titel: 'Außenwand KS + WDVS (EPS 035)', f: { bauteil: 'aussenwand' }, s: [
+    ['baustoff', 'Gipsputz', '', 1.5], ['baustoff', 'Kalksandstein KS 1800', '', 17.5],
+    ['baustoff', 'EPS (Styropor) 035', '', 14], ['baustoff', 'Kalkzementputz', '', 1] ]},
+  { titel: 'Außenwand Porenbeton monolithisch', f: { bauteil: 'aussenwand' }, s: [
+    ['baustoff', 'Gipsputz', '', 1], ['baustoff', 'Porenbeton PP 2-0,35', '', 36.5], ['baustoff', 'Kalkzementputz', '', 2] ]},
+  { titel: 'Steildach Zwischensparren (inhomogen)', f: { bauteil: 'steildach', 'inhom-aktiv': true, 'inhom-nr': '3',
+      'inhom-name': 'KVH / BSH (C24)', 'inhom-lambda': '0.13', 'inhom-fa': '0.88', 'inhom-fb': '0.12' }, s: [
+    ['baustoff', 'Gipskartonplatte (GKB)', '', 1.25], ['luft_ruhend', '', 'Installationsebene (ruhende Luft)', 2.5],
+    ['baustoff', 'Mineralwolle (MW) 035', '', 20], ['baustoff', 'Holzfaserdämmplatte (WF) 045', '', 6] ]},
+  { titel: 'Flachdach Warmdach (PUR/PIR)', f: { bauteil: 'flachdach' }, s: [
+    ['baustoff', 'Stahlbeton (2500)', '', 20], ['baustoff', 'PUR/PIR 024', '', 16] ]},
+  { titel: 'Kellerdecke, unterseitig gedämmt', f: { bauteil: 'kellerdecke' }, s: [
+    ['baustoff', 'Zementestrich (ZE)', '', 5], ['baustoff', 'EPS (Styropor) 040', '', 3],
+    ['baustoff', 'Stahlbeton (2500)', '', 18], ['baustoff', 'Mineralwolle (MW) 035', '', 10] ]},
+  { titel: 'Altbau: Vollziegel ungedämmt', f: { bauteil: 'aussenwand' }, s: [
+    ['baustoff', 'Kalkputz', '', 1.5], ['baustoff', 'Vollziegel VMz 1800', '', 24], ['baustoff', 'Kalkzementputz', '', 2] ]},
+];
 
 // Baustoff-Datenbank mit λ-Bemessungswerten [W/(mK)]
 // Schneider Bautabellen, 26. Auflage – G (aus dem Gedächtnis, prüfen!)

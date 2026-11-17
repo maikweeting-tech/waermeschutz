@@ -157,6 +157,26 @@ table.tab { width: 100%; border-collapse: collapse; font-size: .92rem; }
 .tab tr.kontrolle td { border-top: 2px solid var(--rost); font-weight: 700; color: var(--rost); }
 .tab tr.markiert td { background: var(--rost-hell); }
 
+/* Aufgabe-Leiste */
+.aufgabe { display: grid; gap: 4px 12px; align-items: end; }
+.aufgabe label.feld { margin-bottom: 0; }
+.aufgabe-knoepfe { display: flex; gap: 8px; flex-wrap: wrap; }
+@media (min-width: 620px) { .aufgabe { grid-template-columns: 1fr auto; } }
+
+/* Temperaturgrafik */
+.massstab { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.massstab .btn[aria-pressed="true"] { background: var(--akzent); border-color: var(--akzent); color: var(--auf-akzent); }
+svg.grafik { width: 100%; height: auto; display: block; margin-bottom: 12px; font-family: system-ui, sans-serif; }
+.grafik .g-luft-i, .grafik .g-luft-a { fill: var(--flaeche2); }
+.grafik .g-schicht { stroke: var(--text2); stroke-width: .8; }
+.grafik .g-raster { stroke: var(--linie); stroke-width: 1; }
+.grafik .g-null { stroke: var(--blau); stroke-width: 1.2; stroke-dasharray: 5 4; }
+.grafik .g-achse { fill: var(--text2); font-size: 11px; text-anchor: end; }
+.grafik .g-nr, .grafik .g-seite { fill: var(--text2); font-size: 11px; text-anchor: middle; }
+.grafik .g-linie { fill: none; stroke: var(--rot); stroke-width: 2.5; stroke-linejoin: round; }
+.grafik .g-punkt { fill: var(--rot); stroke: var(--flaeche); stroke-width: 1.5; }
+.grafik .g-wert { fill: var(--text); font-size: 11px; font-weight: 700; text-anchor: middle; paint-order: stroke; stroke: var(--flaeche); stroke-width: 3px; }
+
 /* ── Toast ─────────────────────────────────────── */
 #toast {
   position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(20px); opacity: 0; pointer-events: none;

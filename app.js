@@ -43,9 +43,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Berechnen
   $('btn-calc').addEventListener('click', berechnen);
+  $('ergebnis').addEventListener('click', e => {
+    const b = e.target.closest('[data-massstab]');
+    if (b) setzeMassstab(b.dataset.massstab);
+  });
 
-  // 3 Startzeilen
-  addSchicht(); addSchicht(); addSchicht();
+  // Aufgabe: Beispiele, Link, Drucken
+  BEISPIELE.forEach((b, i) => { const o = document.createElement('option'); o.value = i; o.textContent = b.titel; $('beispiel').appendChild(o); });
+  $('beispiel').addEventListener('change', e => {
+    if (e.target.value === '') return;
+    ladeZustand(beispielZustand(BEISPIELE[e.target.value]));
+    berechnen();
+    e.target.value = '';
+  });
+  $('btn-link').addEventListener('click', kopiereLink);
+  $('btn-druck').addEventListener('click', () => { if ($('ergebnis').hidden) berechnen(); window.print(); });
+
+  // Startzustand: aus Link oder 3 leere Zeilen
+  const z = leseLink();
+  if (z) { ladeZustand(z); berechnen(); }
+  else { addSchicht(); addSchicht(); addSchicht(); }
+  window.addEventListener('hashchange', () => { const z = leseLink(); if (z) { ladeZustand(z); berechnen(); } });
 
   // Service Worker
   if ('serviceWorker' in navigator) {
@@ -94,6 +112,87 @@ function addSchicht() {
     <td><button type="button" class="btn-del btn-icon no-print" title="Entfernen">&times;</button></td>`;
   tb.appendChild(tr);
   nummeriere();
+  return tr;
+}
+
+// ── Zustand speichern / laden (Beispiele, Teilen-Link) ────────
+const FELDER = ['bauteil','raum','richtung','theta-i','theta-e','din-ausgabe','lu-stufe','lu-schicht',
+  'bef-aktiv','bef-nf','bef-dm','bef-lambda','bef-voll','bef-schicht','delta-ur',
+  'inhom-aktiv','inhom-nr','inhom-name','inhom-lambda','inhom-fa','inhom-fb'];
+const STANDARD = { raum:'normal', 'theta-i':'20', 'theta-e':'-5', 'din-ausgabe':'2013-02', 'lu-stufe':'0', 'lu-schicht':'',
+  'bef-aktiv':false, 'bef-nf':'', 'bef-dm':'', 'bef-lambda':'', 'bef-voll':true, 'bef-schicht':'', 'delta-ur':'0',
+  'inhom-aktiv':false, 'inhom-nr':'', 'inhom-name':'', 'inhom-lambda':'', 'inhom-fa':'', 'inhom-fb':'' };
+
+function zustand() {
+  const f = {};
+  FELDER.forEach(id => { const el = $(id); f[id] = el.type === 'checkbox' ? el.checked : el.value; });
+  const s = [...$('schichten').rows].map(r => ['.typ-sel','.s-stoff','.s-name','.s-d','.s-lambda','.s-quelle'].map(k => r.querySelector(k).value));
+  return { f, s };
+}
+
+function ladeZustand(z) {
+  FELDER.forEach(id => {
+    if (!(id in z.f)) return;
+    const el = $(id);
+    if (el.type === 'checkbox') el.checked = !!z.f[id]; else el.value = z.f[id];
+  });
+  $('bef-felder').hidden = !$('bef-aktiv').checked;
+  $('inhom-felder').hidden = !$('inhom-aktiv').checked;
+  $('det-korr').open = $('lu-stufe').value !== '0' || $('bef-aktiv').checked || (nr($('delta-ur')) || 0) !== 0;
+  $('det-inhom').open = $('inhom-aktiv').checked;
+  $('schichten').innerHTML = '';
+  z.s.forEach(([typ, stoff, name, d, lam, quelle]) => {
+    const tr = addSchicht();
+    const ts = tr.querySelector('.typ-sel');
+    ts.value = typ === 'luft_ruhend' ? 'luft_ruhend' : 'baustoff';
+    onTyp(ts);
+    const ss = tr.querySelector('.s-stoff');
+    ss.value = stoff || '';
+    if (ss.value !== (stoff || '')) ss.value = '';
+    tr.querySelector('.s-name').hidden = !!ss.value;
+    tr.querySelector('.s-name').value = ss.value || name || '';
+    tr.querySelector('.s-d').value = d;
+    if (ts.value === 'baustoff') tr.querySelector('.s-lambda').value = lam;
+    tr.querySelector('.s-quelle').value = quelle || '';
+  });
+  if (!z.s.length) addSchicht();
+}
+
+function beispielZustand(b) {
+  const bt = BAUTEILE.find(x => x.id === b.f.bauteil);
+  const f = { ...STANDARD, richtung: bt ? bt.richtung : 'horizontal', ...b.f };
+  const s = b.s.map(([typ, stoff, name, d]) => {
+    const st = BAUSTOFFE.flatMap(g => g.stoffe).find(x => x.name === stoff);
+    return [typ, stoff, name, String(d), st ? String(st.lambda) : '', st ? 'Schneider 26' : ''];
+  });
+  return { f, s };
+}
+
+function b64url(str) {
+  const bytes = new TextEncoder().encode(str);
+  let bin = ''; bytes.forEach(b => bin += String.fromCharCode(b));
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function vonB64url(s) {
+  const bin = atob(s.replace(/-/g, '+').replace(/_/g, '/'));
+  return new TextDecoder().decode(Uint8Array.from(bin, c => c.charCodeAt(0)));
+}
+
+function leseLink() {
+  const m = location.hash.match(/^#a=([\w-]+)$/);
+  if (!m) return null;
+  try {
+    const z = JSON.parse(vonB64url(m[1]));
+    return z && z.f && Array.isArray(z.s) ? z : null;
+  } catch { toast('Link konnte nicht gelesen werden.'); return null; }
+}
+
+function kopiereLink() {
+  const url = location.origin + location.pathname + '#a=' + b64url(JSON.stringify(zustand()));
+  history.replaceState(null, '', url);
+  (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject())
+    .then(() => toast('Link kopiert – enthält alle Eingaben.'))
+    .catch(() => window.prompt('Link kopieren:', url));
 }
 
 function nummeriere() {
@@ -178,7 +277,8 @@ function berechnen() {
       RT = inhomErg.RT;
       const idx = inh.schichtNr - 1;
       if (idx >= 0 && idx < sR.length) {
-        sR[idx].R = inhomErg.RjEq;
+        // aus R_T rückgerechnet, damit Temperaturverlauf und R_T zusammenpassen
+        sR[idx].R = inhomErg.RT - rsi - rse - inhomErg.RHom;
         sR[idx].nameB = inh.materialB;
         sR[idx].inhomogen = true;
       }
@@ -197,13 +297,16 @@ function berechnen() {
   const Rvorh = RT - rsi - rse;
   const temp = temperaturverlauf(sR, rsi, rse, RT, ti, te);
   const minErg = pruefeMin(bauteilId, raum, Rvorh, din);
+  const schimmel = pruefeSchimmel(Rvorh);
   const plaus = plausChecks(U, bauteilId, sR);
 
-  zeigeErgebnis({ sR, rsi, rse, RT, U0, dg, df, dUr, dU, U, Rvorh, temp, minErg, plaus, ti, te, richtung, bauteilId, raum, din, inhomErg });
+  zeigeErgebnis({ sR, rsi, rse, RT, U0, dg, df, dUr, dU, U, Rvorh, temp, minErg, schimmel, plaus, ti, te, richtung, bauteilId, raum, din, inhomErg });
 }
 
 // ── Ergebnisanzeige ───────────────────────────────────────────
+let _erg = null, _massstab = 'd';
 function zeigeErgebnis(e) {
+  _erg = e;
   const c = $('ergebnis');
   c.hidden = false;
   c.innerHTML =
@@ -212,9 +315,83 @@ function zeigeErgebnis(e) {
     htmlRechenweg(e) +
     htmlTemperatur(e) +
     htmlNachweis(e) +
+    htmlSchimmel(e) +
     htmlPlaus(e) +
     htmlZusammenfassung(e);
   c.scrollIntoView({ behavior: 'smooth' });
+}
+
+// ── Grafik Temperaturverlauf (SVG) ────────────────────────────
+const GRUPPE_FARBE = {
+  'Dämmstoffe': '#f2c94c', 'Mauerwerk': '#c0573e', 'Beton': '#9aa0a6', 'Holz / Holzwerkstoffe': '#b07d48',
+  'Putze / Mörtel / Estriche': '#e3d7c1', 'Platten / Bekleidungen': '#d0d0d0'
+};
+function schichtFarbe(s) {
+  if (s.typ === 'luft_ruhend') return '#bfe3f5';
+  const g = BAUSTOFFE.find(g => g.stoffe.some(x => x.name === s.name));
+  return g ? GRUPPE_FARBE[g.gruppe] : '#cfc6b8';
+}
+
+function grafikSVG(e, massstab) {
+  const W = 640, H = 340, x0 = 58, x1 = 610, y0 = 26, y1 = 280;
+  const P = e.temp.punkte, n = e.sR.length;
+  const sRges = P[P.length-1].sR;
+  let xs;
+  if (massstab === 'R') {
+    xs = P.map(p => x0 + p.sR / sRges * (x1 - x0));
+  } else {
+    const luft = 44, breite = x1 - x0 - 2*luft, minB = 14;
+    const dGes = e.sR.reduce((a, s) => a + s.d, 0);
+    let b = e.sR.map(s => Math.max(minB, s.d / dGes * breite));
+    const k = breite / b.reduce((a, v) => a + v, 0);
+    b = b.map(v => v * k);
+    xs = [x0, x0 + luft];
+    b.forEach(v => xs.push(xs[xs.length-1] + v));
+    xs.push(x1);
+  }
+  const th = P.map(p => p.theta);
+  const tMax = Math.ceil((Math.max(...th, e.ti) + 1) / 5) * 5, tMin = Math.floor((Math.min(...th, e.te) - 1) / 5) * 5;
+  const y = t => y0 + (tMax - t) / ((tMax - tMin) || 1) * (y1 - y0);
+  const f1 = v => v.toFixed(1);
+
+  let s = `<svg class="grafik" viewBox="0 0 ${W} ${H}" role="img" aria-label="Temperaturverlauf im Bauteil">`;
+  // Luftbereiche innen/außen
+  s += `<rect x="${x0}" y="${y0}" width="${f1(xs[1]-x0)}" height="${y1-y0}" class="g-luft-i"/>`;
+  s += `<rect x="${f1(xs[n+1])}" y="${y0}" width="${f1(x1-xs[n+1])}" height="${y1-y0}" class="g-luft-a"/>`;
+  // Schichten
+  e.sR.forEach((sch, i) => {
+    const xa = xs[i+1], xb = xs[i+2];
+    s += `<rect x="${f1(xa)}" y="${y0}" width="${f1(xb-xa)}" height="${y1-y0}" fill="${schichtFarbe(sch)}" fill-opacity=".55" class="g-schicht"><title>${esc(sch.name || 'Schicht '+(i+1))}: d = ${fmtR(sch.d/100)} m, R = ${fmtR(sch.R)} m²K/W</title></rect>`;
+    if (xb - xa >= 9) s += `<text x="${f1((xa+xb)/2)}" y="${y1+16}" class="g-nr">${i+1}</text>`;
+  });
+  // Achse und Raster
+  for (let t = tMin; t <= tMax; t += 5) {
+    s += `<line x1="${x0}" x2="${x1}" y1="${f1(y(t))}" y2="${f1(y(t))}" class="${t === 0 ? 'g-null' : 'g-raster'}"/>`;
+    s += `<text x="${x0-6}" y="${f1(y(t)+4)}" class="g-achse">${t}</text>`;
+  }
+  s += `<text x="${x0}" y="${y0-10}" class="g-achse" text-anchor="start" style="text-anchor:start">θ [°C]</text>`;
+  s += `<text x="${x0}" y="${y1+31}" class="g-seite" style="text-anchor:start">← innen</text>`;
+  s += `<text x="${x1}" y="${y1+31}" class="g-seite" style="text-anchor:end">außen →</text>`;
+  // Temperaturlinie
+  s += `<polyline points="${xs.map((x, i) => f1(x) + ',' + f1(y(th[i]))).join(' ')}" class="g-linie"/>`;
+  let letztX = -99;
+  const xEnde = xs[xs.length-1];
+  xs.forEach((x, i) => {
+    s += `<circle cx="${f1(x)}" cy="${f1(y(th[i]))}" r="3.5" class="g-punkt"/>`;
+    if (i === xs.length-1 || (x - letztX >= 34 && xEnde - x >= 34)) {
+      const oben = i % 2 === 0 ? -9 : 17;
+      s += `<text x="${f1(x)}" y="${f1(y(th[i]) + oben)}" class="g-wert">${fmtT(th[i])}</text>`;
+      letztX = x;
+    }
+  });
+  s += `<text x="${(x0+x1)/2}" y="${H-6}" class="g-seite">Maßstab: ${massstab === 'R' ? 'Wärmedurchlasswiderstand R (Temperaturlinie wird zur Geraden)' : 'Schichtdicke d (Luftbereiche schematisch)'}</text>`;
+  return s + '</svg>';
+}
+
+function setzeMassstab(m) {
+  _massstab = m;
+  $('grafik-box').innerHTML = grafikSVG(_erg, m);
+  document.querySelectorAll('[data-massstab]').forEach(b => b.setAttribute('aria-pressed', b.dataset.massstab === m));
 }
 
 // 0 – Bauteilkopf
@@ -257,7 +434,7 @@ function htmlRechenweg(e) {
     if (s.typ === 'luft_ruhend') {
       rw += `R<sub>${i+1}</sub> = ${fmtR(s.R)} m²K/W (Luftschicht, Tabelle)\n`;
     } else if (s.inhomogen) {
-      rw += `R<sub>${i+1,eq}</sub> = ${fmtR(s.R)} m²K/W (äquivalent, inhomogen)\n`;
+      rw += `R<sub>${i+1},eq</sub> = R<sub>T</sub> − R<sub>si</sub> − R<sub>se</sub> − ΣR<sub>übrige</sub> = ${fmtR(s.R)} m²K/W (inhomogen, aus R<sub>T</sub> unten rückgerechnet)\n`;
     } else {
       rw += `R<sub>${i+1}</sub> = d/λ = ${fmtR(s.d/100)} / ${fmtR(s.lambda)} = ${fmtR(s.R)} m²K/W\n`;
     }
@@ -316,6 +493,11 @@ function htmlTemperatur(e) {
   });
   return `<div class="karte">
     <p class="erg-titel">3 – Temperaturverlauf</p>
+    <div class="massstab no-print" role="group" aria-label="Maßstab der Grafik">
+      <button type="button" class="btn btn-klein" data-massstab="d" aria-pressed="${_massstab === 'd'}">Maßstab Dicke d</button>
+      <button type="button" class="btn btn-klein" data-massstab="R" aria-pressed="${_massstab === 'R'}">Maßstab R</button>
+    </div>
+    <div id="grafik-box">${grafikSVG(e, _massstab)}</div>
     <p>Wärmestromdichte q = (θ<sub>i</sub> − θ<sub>e</sub>) / R<sub>T</sub> = (${fmtT(e.ti)} − (${fmtT(e.te)})) / ${fmtR(e.RT)} = <strong>${fmtQ(q)} W/m²</strong></p>
     <div class="tabwrap"><table class="tab">
       <thead><tr><th>Stelle</th><th class="zahl">ΣR [m²K/W]</th><th class="zahl">θ [°C]</th></tr></thead>
@@ -354,13 +536,34 @@ function htmlNachweis(e) {
   </div>`;
 }
 
-// 5 – Plausibilitätscheck
+// 5 – Schimmelnachweis f_Rsi
+function htmlSchimmel(e) {
+  const m = e.schimmel;
+  const cls = m.ok ? 'ok' : 'nok', sym = m.ok ? '✓' : '✗';
+  const rw = `R'<sub>T</sub> = R<sub>si</sub> + R + R<sub>se</sub> = ${fmtR(m.rsi)} + ${fmtR(m.R)} + ${fmtR(m.rse)} = ${fmtR(m.RT)} m²K/W
+f<sub>Rsi</sub> = 1 − R<sub>si</sub> / R'<sub>T</sub> = 1 − ${fmtR(m.rsi)} / ${fmtR(m.RT)} = <span class="erg">${fmtR(m.fRsi)}</span> ${m.ok ? '≥' : '<'} ${fmtEta(m.fmin)}
+θ<sub>si</sub> = θ<sub>e</sub> + f<sub>Rsi</sub> · (θ<sub>i</sub> − θ<sub>e</sub>) = ${fmtT(m.te)} + ${fmtR(m.fRsi)} · (${fmtT(m.ti)} − (${fmtT(m.te)})) = <span class="erg">${fmtT(m.thetaSi)} °C</span> ${m.thetaSi >= m.thetaMin ? '≥' : '<'} ${fmtT(m.thetaMin)} °C`;
+  return `<div class="karte">
+    <p class="erg-titel">5 – Schimmelnachweis (Temperaturfaktor f<sub>Rsi</sub>)</p>
+    <p class="hinweis">Norm-Randbedingungen nach DIN 4108-2: θ<sub>i</sub> = ${fmtT(m.ti)} °C, φ<sub>i</sub> = ${m.phi} %, θ<sub>e</sub> = ${fmtT(m.te)} °C, erhöhter R<sub>si</sub> = ${fmtR(m.rsi)} m²K/W. Unabhängig von θ<sub>i</sub>/θ<sub>e</sub> oben.</p>
+    <div class="rechenweg">${rw}</div>
+    <div class="ampel ${cls}" style="margin-top:12px">
+      <div class="licht">${sym}</div>
+      <div>Schimmelfreiheit in der Fläche ${m.ok ? 'gegeben' : 'NICHT gegeben'}<br>
+        <small>f<sub>Rsi</sub> = ${fmtR(m.fRsi)} ${m.ok ? '≥' : '<'} 0,70</small></div>
+    </div>
+    <p class="hinweis klein" style="margin-top:8px">Gilt für die ungestörte Fläche. Maßgebend sind meist Wärmebrücken (Ecken, Anschlüsse) – dort f<sub>Rsi</sub> gesondert nachweisen.</p>
+    <p class="pruefen">Randbedingungen aus dem Gedächtnis – gegen DIN 4108-2, Abschnitt 6.2 prüfen!</p>
+  </div>`;
+}
+
+// 6 – Plausibilitätscheck
 function htmlPlaus(e) {
   let items = '';
   e.plaus.forEach(p => {
     items += `<div class="check-item"><div class="check-dot ${p.ok ? 'ok' : 'warn'}"></div><div>${esc(p.text)}<br><span class="klein hinweis">${esc(p.hinweis)}</span></div></div>`;
   });
-  return `<div class="karte"><p class="erg-titel">5 – Plausibilitätscheck</p>${items}</div>`;
+  return `<div class="karte"><p class="erg-titel">6 – Plausibilitätscheck</p>${items}</div>`;
 }
 
 // 6 – Zusammenfassung
@@ -371,7 +574,8 @@ function htmlZusammenfassung(e) {
     <p class="erg-titel">Zusammenfassung</p>
     <p>Das Bauteil <strong>${esc(bt ? bt.label : '')}</strong> erreicht einen Wärmedurchgangskoeffizienten von
        <strong>U = ${fmtU(e.U)} W/(m²K)</strong>.
-       Der winterliche Mindestwärmeschutz nach DIN 4108-2 ist <strong>${minOk}</strong>.</p>
+       Der winterliche Mindestwärmeschutz nach DIN 4108-2 ist <strong>${minOk}</strong>,
+       der Schimmelnachweis in der Fläche ist <strong>${e.schimmel.ok ? 'erfüllt' : 'NICHT erfüllt'}</strong> (f<sub>Rsi</sub> = ${fmtR(e.schimmel.fRsi)}).</p>
     <div class="hinweis-box">
       <strong>Annahmen und offene Punkte:</strong>
       <ul style="margin:4px 0 0;padding-left:1.2em">
