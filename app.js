@@ -101,8 +101,10 @@ function stoffOptionen() {
   BAUSTOFFE.forEach(g => {
     h += `<optgroup label="${esc(g.gruppe)}">`;
     g.stoffe.forEach(s => {
-      const lf = (s.lambda < 0.1 ? s.lambda.toFixed(3) : s.lambda.toFixed(2)).replace('.', ',');
-      h += `<option value="${esc(s.name)}" data-lambda="${s.lambda}" data-mu="${s.mu}" data-d="${s.d || ''}">${esc(s.name)} · λ ${lf} · μ ${s.mu.toLocaleString('de-DE')}</option>`;
+      const teile = [esc(s.name)];
+      if (s.lambda) teile.push('λ ' + (s.lambda < 0.1 ? s.lambda.toFixed(3) : s.lambda.toFixed(2)).replace('.', ','));
+      if (!s.sd) teile.push('μ ' + muText(s));
+      h += `<option value="${esc(s.name)}" data-lambda="${s.lambda || ''}" data-mu="${s.mu}" data-d="${s.d || ''}">${teile.join(' · ')}${s.q === 'G' ? ' (ungeprüft)' : ''}</option>`;
     });
     h += '</optgroup>';
   });
@@ -114,12 +116,21 @@ function onStoff(sel) {
   const name = tr.querySelector('.s-name');
   if (!sel.value) { name.hidden = false; name.value = ''; return; }
   const o = sel.selectedOptions[0].dataset;
+  const st = BAUSTOFFE.flatMap(g => g.stoffe).find(x => x.name === sel.value);
   name.hidden = true;
   name.value = sel.value;
   tr.querySelector('.s-lambda').value = o.lambda;
+  tr.querySelector('.s-lambda').placeholder = o.lambda ? 'W/(mK)' : '– (R ≈ 0)';
   tr.querySelector('.s-mu').value = o.mu;
   if (o.d) tr.querySelector('.s-d').value = o.d;
-  tr.querySelector('.s-quelle').value = 'Schneider 26';
+  tr.querySelector('.s-quelle').value = quelleText(st);
+}
+
+function muText(s) { return s.muMax ? `${s.mu.toLocaleString('de-DE')}/${s.muMax.toLocaleString('de-DE')}` : s.mu.toLocaleString('de-DE'); }
+function quelleText(s) {
+  if (!s) return '';
+  if (s.q !== 'Z') return 'ungeprüft';
+  return 'Schneider 26, Taf. 4.33' + (s.sd ? ` (s_d = ${String(s.sd).replace('.', ',')} m)` : s.muMax ? ` (μ ${muText(s)})` : '');
 }
 
 function addSchicht() {
@@ -178,7 +189,10 @@ function ladeZustand(z) {
     tr.querySelector('.s-name').hidden = !!ss.value;
     tr.querySelector('.s-name').value = ss.value || name || '';
     tr.querySelector('.s-d').value = d;
-    if (ts.value === 'baustoff') tr.querySelector('.s-lambda').value = lam;
+    if (ts.value === 'baustoff') {
+      tr.querySelector('.s-lambda').value = lam;
+      if (!lam) tr.querySelector('.s-lambda').placeholder = '– (R ≈ 0)';
+    }
     tr.querySelector('.s-quelle').value = quelle || '';
     if (mu !== undefined) tr.querySelector('.s-mu').value = mu;
   });
@@ -190,7 +204,7 @@ function beispielZustand(b) {
   const f = { ...STANDARD, 'gmodg-fall': $('gmodg-fall').value, richtung: bt ? bt.richtung : 'horizontal', ...b.f };
   const s = b.s.map(([typ, stoff, name, d]) => {
     const st = BAUSTOFFE.flatMap(g => g.stoffe).find(x => x.name === stoff);
-    return [typ, stoff, name, String(d), st ? String(st.lambda) : '', st ? 'Schneider 26' : '', st ? String(st.mu) : (typ === 'luft_ruhend' ? '1' : '')];
+    return [typ, stoff, name, String(d), st && st.lambda ? String(st.lambda) : '', quelleText(st), st ? String(st.mu) : (typ === 'luft_ruhend' ? '1' : '')];
   });
   return { f, s };
 }
@@ -253,7 +267,7 @@ function leseSchichten() {
     const quelle = r.querySelector('.s-quelle').value.trim();
     const mu = nr(r.querySelector('.s-mu'));
     return { typ, name, d, lambda, quelle, mu };
-  }).filter(s => !isNaN(s.d) && s.d > 0 && (s.typ !== 'baustoff' || (!isNaN(s.lambda) && s.lambda > 0)));
+  }).filter(s => s.d > 0 && (s.typ !== 'baustoff' || s.lambda > 0 || s.mu > 0));
 }
 
 function leseInhom() {
@@ -446,7 +460,7 @@ function htmlSchichttabelle(e) {
   let rows = '';
   e.sR.forEach((s, i) => {
     const dM = fmtR(s.d / 100);
-    const lam = s.typ === 'luft_ruhend' ? '—' : fmtR(s.lambda);
+    const lam = s.lambda > 0 && s.typ !== 'luft_ruhend' ? fmtR(s.lambda) : '—';
     const name = s.inhomogen ? `${esc(s.name)} / ${esc(s.nameB)} (äquiv.)` : esc(s.name);
     rows += `<tr><td class="zahl">${i+1}</td><td>${name}</td><td class="zahl mono">${dM}</td><td class="zahl mono">${lam}</td><td class="zahl mono">${fmtR(s.R)}</td><td class="klein">${esc(s.quelle)}</td></tr>`;
   });
@@ -468,6 +482,8 @@ function htmlRechenweg(e) {
   e.sR.forEach((s, i) => {
     if (s.typ === 'luft_ruhend') {
       rw += `R<sub>${i+1}</sub> = ${fmtR(s.R)} m²K/W (Luftschicht, Tabelle)\n`;
+    } else if (!(s.lambda > 0)) {
+      rw += `R<sub>${i+1}</sub> ≈ 0 (Folie/Bahn ohne λ – nur für den Feuchteschutz)\n`;
     } else if (s.inhomogen) {
       rw += `R<sub>${i+1},eq</sub> = R<sub>T</sub> − R<sub>si</sub> − R<sub>se</sub> − ΣR<sub>übrige</sub> = ${fmtR(s.R)} m²K/W (inhomogen, aus R<sub>T</sub> unten rückgerechnet)\n`;
     } else {
@@ -568,6 +584,7 @@ function htmlNachweis(e) {
       </div>
     </div>
     <p class="pruefen" style="margin-top:8px">R<sub>min</sub>-Wert aus dem Gedächtnis – gegen DIN 4108-2:${esc(m.din)}, Tabelle 3 prüfen!</p>
+    <p class="hinweis klein">§ 11 GModG verweist bis 31.12.2026 auf DIN 4108-2:2013-02, ab 01.01.2027 auf DIN 4108-2:2026-05.</p>
   </div>`;
 }
 
@@ -576,7 +593,7 @@ function htmlGModG(e) {
   const g = e.gmodg;
   if (!g) return '';
   const cls = g.ok ? 'ok' : 'nok', sym = g.ok ? '✓' : '✗';
-  const stand = `<p class="hinweis klein" style="margin-top:8px">Quelle: ${esc(GMODG.stand)}. Ob sich ab 01.01.2027 (Artikel 2) etwas an diesen Werten ändert, ist <strong>nicht geprüft</strong>.</p>`;
+  const stand = `<p class="hinweis klein" style="margin-top:8px">Quelle: ${esc(GMODG.stand)}; vgl. Schneider 26, Tafel 4.16 (dort noch als GEG).</p>`;
   const uZeile = `U = ${fmtU(g.U)} W/(m²K) (inkl. Korrekturwerte ΔU, auf 2 Stellen gerundet)`;
 
   if (g.fall === 'neubau') {
@@ -710,7 +727,8 @@ m<sub>ev</sub> = t<sub>ev</sub> · (g<sub>i</sub> + g<sub>e</sub>) = <span class
     <div class="ampel ${cls}" style="margin-top:12px"><div class="licht">${sym}</div><div>${urteil}<br><small>${detail}</small></div></div>
     ${F.tauwasser ? `<p class="hinweis klein" style="margin-top:8px">Grenzwert 0,5 kg/m², wenn die Tauwasserebene an einer nicht kapillar wasseraufnahmefähigen Schicht liegt (z.B. Folie, Mineralwolle). Bei Holz zusätzlich Massezunahme ≤ 5 % (Holzwerkstoffe ≤ 3 %) prüfen.</p>` : ''}
     ${e.inhomErg ? '<p class="hinweis klein">Inhomogene Schicht: Nachweis im Gefachbereich (Baustoff aus der Schichttabelle).</p>' : ''}
-    <p class="pruefen">μ-Werte und Randbedingungen aus dem Gedächtnis – gegen Schneider 26 / DIN 4108-3 prüfen!</p>
+    <p class="hinweis klein">μ-Werte mit Bereich (z.B. 15/35): eingetragen ist der kleinere Wert. Laut Schneider 26, Tafel 4.33 ist jeweils der für die Konstruktion <strong>ungünstigere</strong> Wert zu wählen – innen vor der Tauwasserebene meist der kleinere, außen dahinter meist der größere. Den Wert in der Spalte μ bei Bedarf ändern.</p>
+    <p class="pruefen">Randbedingungen nach DIN 4108-3:2018-10 aus dem Gedächtnis – prüfen! Ab 01.01.2027 verweist § 11 GModG auf DIN 4108-3:2024-03 (Änderungen nicht geprüft).</p>
   </div>`;
 }
 

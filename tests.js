@@ -13,7 +13,7 @@ const schicht = (name, dCm) => ({ typ: 'baustoff', name, d: dCm, lambda: st(name
 const summeR = (sch, ri) => sch.reduce((a, s) => a + schichtR(s, ri), 0);
 
 // ── Außenwand KS + WDVS: Gipsputz 1,5 / KS 1800 17,5 / EPS 035 14 / KZ-Putz 1 ──
-const wand = [schicht('Gipsputz', 1.5), schicht('Kalksandstein KS 1800', 17.5), schicht('EPS (Styropor) 035', 14), schicht('Kalkzementputz', 1)];
+const wand = [schicht('Gipsputz (1400)', 1.5), schicht('Kalksandstein (1800)', 17.5), schicht('EPS (Styropor) 035', 14), schicht('Kalk-/Kalkzementputz (1800)', 1)];
 pruefe('R Gipsputz = 0,015/0,51', fmtR(schichtR(wand[0], 'horizontal')), '0,029');
 pruefe('R EPS = 0,14/0,035', fmtR(schichtR(wand[2], 'horizontal')), '4,000');
 const Rw = summeR(wand, 'horizontal');
@@ -45,15 +45,16 @@ pruefe('ΔU_g Stufe 0 = 0', deltaUg(0, wand, RTw, 'horizontal', 3).wert, 0);
 const df = deltaUf({ nf: 4, durchmesser: 6, lambdaF: 50, daemmNr: 3 }, wand, 'horizontal');
 pruefe('ΔU_f = 0,8·50·4·(π/4·0,006²)/0,14', fmtDU(df.wert), '0,0323');
 
-// ── Altbau Vollziegel: Kalkputz 1,5 / VMz 1800 24 / KZ-Putz 2 ──
-const alt = [schicht('Kalkputz', 1.5), schicht('Vollziegel VMz 1800', 24), schicht('Kalkzementputz', 2)];
+// ── Altbau Vollziegel: Kalkputz 1,5 / Vollziegel 1800 24 / Kalkzementputz 2 ──
+// Hand: R = 0,015/1,0 + 0,24/0,81 + 0,02/1,0 = 0,3313; f_Rsi = 1 − 0,25/0,6213 = 0,5976; θ_si = −5 + 0,5976·25 = 9,94
+const alt = [schicht('Kalk-/Kalkzementputz (1800)', 1.5), schicht('Vollziegel (1800)', 24), schicht('Kalk-/Kalkzementputz (1800)', 2)];
 const Ra = summeR(alt, 'horizontal');
-pruefe('ΣR Altbau', fmtR(Ra), '0,334');
+pruefe('ΣR Altbau', fmtR(Ra), '0,331');
 pruefe('Altbau verfehlt R_min', pruefeMin('aussenwand', 'normal', Ra, '2013-02').ok, false);
 const schA = pruefeSchimmel(Ra);
-pruefe('f_Rsi Altbau', fmtR(schA.fRsi), '0,599');
+pruefe('f_Rsi Altbau', fmtR(schA.fRsi), '0,598');
 pruefe('Altbau: Schimmelnachweis nicht erfüllt', schA.ok, false);
-pruefe('θ_si (Norm) Altbau', fmtT(schA.thetaSi), '10,0');
+pruefe('θ_si (Norm) Altbau', fmtT(schA.thetaSi), '9,9');
 pruefe('Grenzfall f_Rsi = 0,70 gilt als erfüllt', pruefeSchimmel(0.25 / 0.3 - 0.29).ok, true);
 
 // ── Luftschichten ──
@@ -64,7 +65,7 @@ pruefe('Luft über 300 mm = Endwert', fmtR(luftR(400, 'abwaerts')), '0,230');
 pruefe('Luftschicht-Schicht 2,5 cm aufwärts', fmtR(schichtR({ typ: 'luft_ruhend', d: 2.5 }, 'aufwaerts')), '0,160');
 
 // ── Steildach inhomogen: GKB 1,25 / Luft 2,5 / MW 035 20 + KVH 12 % / WF 045 6 ──
-const dach = [schicht('Gipskartonplatte (GKB)', 1.25), { typ: 'luft_ruhend', name: 'Luft', d: 2.5 },
+const dach = [schicht('Gipskartonplatte (900)', 1.25), { typ: 'luft_ruhend', name: 'Luft', d: 2.5 },
   schicht('Mineralwolle (MW) 035', 20), schicht('Holzfaserdämmplatte (WF) 045', 6)];
 const ih = inhomogenRT(dach, 0.10, 0.04, 'aufwaerts', { schichtNr: 3, lambdaB: 0.13, fa: 0.88, fb: 0.12 });
 pruefe('Inhomogen: R_j,eq = 1/(0,88/5,714 + 0,12/1,538)', fmtR(ih.RjEq), '4,310');
@@ -80,29 +81,31 @@ pruefe('p_sat(0 °C) = 610,5 Pa', psat(0), 610.5);
 pruefe('p_sat(12 °C) = 1402 Pa', Math.round(psat(12)), 1402);
 
 const gW = glaser(wand, 'horizontal', false);
-pruefe('KS + WDVS: S_d = 0,15 + 3,5 + 7 + 0,2', fmtR(gW.Sd), '10,850');
+pruefe('KS + WDVS: S_d = 4·0,015 + 15·0,175 + 50·0,14 + 15·0,01', fmtR(gW.Sd), '9,835');
 pruefe('KS + WDVS: kein Tauwasser', gW.tauwasser, false);
 pruefe('KS + WDVS: Nachweis erfüllt', gW.ok, true);
 
 // Steildach ohne Dampfbremse (Gefach): Hand: θ_c = −0,45 °C, p_c = 588 Pa,
-// m_c = 2,0e-10·7 776 000·[(1168,5−588,2)/0,325 − (588,2−320,9)/0,3] = 1,391 kg/m²
+// s_d innen = 4·0,0125 + 0,025 + 0,2 = 0,275 m, außen 5·0,06 = 0,3 m
+// m_c = 2,0e-10·7 776 000·[(1168,5−588,2)/0,275 − (588,2−320,9)/0,3] = 1,896 kg/m²
 dach[1].mu = 1;
 const gD = glaser(dach, 'aufwaerts', true);
 pruefe('Steildach ohne DB: eine Tauwasserebene', gD.ebenen.length, 1);
 pruefe('Steildach ohne DB: Ebene zwischen MW und WF (Grenzfläche 3)', gD.ebenen[0].k, 3);
 pruefe('Steildach ohne DB: θ_c', gD.ebenen[0].theta.toFixed(2), '-0.45');
 pruefe('Steildach ohne DB: p_c', Math.round(gD.ebenen[0].p), 588);
-pruefe('Steildach ohne DB: m_c', fmtR(gD.mc), '1,391');
+pruefe('Steildach ohne DB: m_c', fmtU(gD.mc), '1,90');
 pruefe('Steildach ohne DB: m_c > 1,0 → nicht zulässig', gD.ok, false);
 pruefe('Massenbilanz: m_c = Summe der Ebenen', Math.abs(gD.mc - gD.ebenen.reduce((a, e) => a + e.mc, 0)) < 1e-12, true);
 
-const mitDB = [dach[0], dach[1], schicht('Dampfbremse (s_d ≈ 2 m)', 0.02), dach[2], dach[3]];
+const mitDB = [dach[0], dach[1], schicht('PE-Folie 0,15 mm (s_d = 50 m)', 0.015), dach[2], dach[3]];
 const gDB = glaser(mitDB, 'aufwaerts', true);
-pruefe('Dampfbremse: s_d = 10000 · 0,0002 m = 2 m', fmtR(gDB.sd[2]), '2,000');
-pruefe('Steildach mit Dampfbremse: kein Tauwasser', gDB.tauwasser, false);
+pruefe('PE-Folie 0,15 mm: s_d = 50 m (Tafel 4.33)', fmtR(gDB.sd[2]), '50,000');
+pruefe('PE-Folie ohne λ: R = 0', schichtR(mitDB[2], 'aufwaerts'), 0);
+pruefe('Steildach mit PE-Dampfbremse: kein Tauwasser', gDB.tauwasser, false);
 
 // Innendämmung ohne Dampfbremse: Tauwasser hinter der Mineralwolle, Verdunstung reicht nicht
-const innen = [schicht('Gipskartonplatte (GKB)', 1.25), schicht('Mineralwolle (MW) 035', 6), schicht('Vollziegel VMz 1800', 24), schicht('Kalkzementputz', 2)];
+const innen = [schicht('Gipskartonplatte (900)', 1.25), schicht('Mineralwolle (MW) 035', 6), schicht('Vollziegel (1800)', 24), schicht('Kalk-/Kalkzementputz (1800)', 2)];
 const gI = glaser(innen, 'horizontal', false);
 pruefe('Innendämmung: Tauwasser zwischen MW und Ziegel', gI.ebenen.map(e => e.k).join(), '2');
 pruefe('Innendämmung: nicht zulässig', gI.ok, false);
@@ -128,8 +131,15 @@ pruefe('Jedes Bauteil hat gültige Anlage-7-Zeilen und Referenz',
 // ── Daten ──
 const namen = BAUSTOFFE.flatMap(g => g.stoffe.map(s => s.name));
 pruefe('Baustoffnamen eindeutig', new Set(namen).size, namen.length);
-pruefe('Alle λ > 0', BAUSTOFFE.every(g => g.stoffe.every(s => s.lambda > 0)), true);
-pruefe('Alle μ > 0', BAUSTOFFE.every(g => g.stoffe.every(s => s.mu > 0)), true);
+pruefe('Alle λ > 0 (oder Folie mit s_d)', BAUSTOFFE.every(g => g.stoffe.every(s => s.lambda > 0 || (s.lambda === null && s.sd > 0))), true);
+pruefe('Alle μ > 0, μ ≤ μ_max', BAUSTOFFE.every(g => g.stoffe.every(s => s.mu > 0 && (!s.muMax || s.mu <= s.muMax))), true);
+// Stichproben gegen Schneider 26, Tafel 4.33
+pruefe('Taf. 4.33: Kalksandstein 1800 λ 0,99, μ 15/25', [st('Kalksandstein (1800)').lambda, st('Kalksandstein (1800)').mu, st('Kalksandstein (1800)').muMax].join(), '0.99,15,25');
+pruefe('Taf. 4.33: Stahlbeton 1 % Stahl λ 2,3, μ 80/130', [st('Stahlbeton (2300, 1 % Stahl)').lambda, st('Stahlbeton (2300, 1 % Stahl)').mu, st('Stahlbeton (2300, 1 % Stahl)').muMax].join(), '2.3,80,130');
+pruefe('Taf. 4.33: Gipskartonplatte 900 λ 0,25, μ 4/10', [st('Gipskartonplatte (900)').lambda, st('Gipskartonplatte (900)').mu, st('Gipskartonplatte (900)').muMax].join(), '0.25,4,10');
+pruefe('Taf. 4.33: Porenbeton-Planstein 350 λ 0,11', st('Porenbeton-Planstein PP (350)').lambda, 0.11);
+pruefe('Taf. 4.33: Aluminiumfolie s_d = 1500 m', Math.round(st('Aluminiumfolie 0,05 mm (s_d = 1500 m)').mu * 0.005 / 100), 1500);
+pruefe('Anlage 7: Fußnote 1 gilt für Nr. 1a, 1b, 5a–5c, 6a–6e', GMODG.anl7.every(z => z.fn.includes(1)), true);
 pruefe('Beispiele nutzen nur vorhandene Baustoffe',
   BEISPIELE.every(b => b.s.every(([typ, stoff]) => typ === 'luft_ruhend' || namen.includes(stoff))), true);
 pruefe('Beispiele nutzen nur vorhandene Bauteile', BEISPIELE.every(b => BAUTEILE.some(x => x.id === b.f.bauteil)), true);

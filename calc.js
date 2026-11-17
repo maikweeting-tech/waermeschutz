@@ -26,7 +26,7 @@ function luftR(dMm, richtung) {
 // ── R einer Schicht ───────────────────────────────────────────
 function schichtR(s, richtung) {
   if (s.typ === 'luft_ruhend') return luftR(s.d * 10, richtung);
-  if (s.d <= 0 || s.lambda <= 0) return 0;
+  if (!(s.d > 0) || !(s.lambda > 0)) return 0;   // Folien ohne λ: R vernachlässigbar
   return (s.d / 100) / s.lambda;
 }
 

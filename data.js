@@ -30,26 +30,27 @@ const BAUTEILE = [
   { id:'kellerdecke',        label:'Kellerdecke / gegen Erdreich',            richtung:'abwaerts',   rminKey:'kellerdecke',     anl7:['6b','6a','6c'], refKey:'erdreich' }
 ];
 
-// Gebäudemodernisierungsgesetz (GModG) – Z (zitiert aus der nichtamtlichen Lesefassung,
-// gesetze-im-internet.de/geg, gültig 29.07.–31.12.2026; Stand ab 01.01.2027 nicht geprüft!)
+// Gebäudemodernisierungsgesetz (GModG) – Z (zitiert aus den nichtamtlichen Lesefassungen
+// gültig 29.07.–31.12.2026 und ab 01.01.2027 (BBSR, gmodg.bund.de): § 36, Anlage 7 und Anlage 1
+// sind in beiden Fassungen gleich; Abgleich mit Schneider 26, Tafel 4.16)
 // § 36 mit Anlage 7: Höchstwerte U_max [W/(m²K)] bei Änderung bestehender Gebäude.
 // hoch = Wohngebäude bzw. Zonen ≥ 19 °C, niedrig = Zonen 12 bis < 19 °C (null = keine Anforderung)
 const GMODG = {
-  stand: 'GModG, nichtamtliche Lesefassung gültig 29.07.–31.12.2026',
+  stand: 'GModG, nichtamtliche Lesefassungen gültig ab 29.07.2026 und ab 01.01.2027 (§ 36, Anlage 7 und Anlage 1 unverändert)',
   anl7: [
-    { id:'1a', text:'Außenwand – Ersatz oder erstmaliger Einbau',                                        hoch:0.24, niedrig:0.35, fn:[] },
-    { id:'1b', text:'Außenwand – außenseitige Dämmung, Bekleidung oder neuer Außenputz',                  hoch:0.24, niedrig:0.35, fn:[2] },
-    { id:'5a', text:'Dach, oberste Geschossdecke, Abseitenwand – Ersatz oder erstmaliger Einbau',          hoch:0.24, niedrig:0.35, fn:[] },
+    { id:'1a', text:'Außenwand – Ersatz oder erstmaliger Einbau',                                        hoch:0.24, niedrig:0.35, fn:[1] },
+    { id:'1b', text:'Außenwand – außenseitige Dämmung, Bekleidung oder neuer Außenputz',                  hoch:0.24, niedrig:0.35, fn:[1,2] },
+    { id:'5a', text:'Dach, oberste Geschossdecke, Abseitenwand – Ersatz oder erstmaliger Einbau',          hoch:0.24, niedrig:0.35, fn:[1] },
     { id:'5b', text:'Dach – neue Dachdeckung oder Bekleidung/Dämmung auf der Kaltseite',                  hoch:0.24, niedrig:0.35, fn:[1,5] },
     { id:'5c', text:'Dach mit Abdichtung (Flachdach) – Ersatz der Abdichtung',                             hoch:0.20, niedrig:0.35, fn:[1,5] },
-    { id:'6a', text:'Wand/Decke gegen Erdreich oder unbeheizte Räume – Ersatz oder erstmaliger Einbau',    hoch:0.30, niedrig:null, fn:[] },
+    { id:'6a', text:'Wand/Decke gegen Erdreich oder unbeheizte Räume – Ersatz oder erstmaliger Einbau',    hoch:0.30, niedrig:null, fn:[1] },
     { id:'6b', text:'Wand/Decke gegen Erdreich oder unbeheizt – Bekleidung/Dämmung auf der Kaltseite',     hoch:0.30, niedrig:null, fn:[1,5] },
     { id:'6c', text:'Decke nach unten – Fußbodenaufbau auf der beheizten Seite',                           hoch:0.50, niedrig:null, fn:[1,5] },
     { id:'6d', text:'Decke nach unten zur Außenluft – Ersatz oder erstmaliger Einbau',                     hoch:0.24, niedrig:0.35, fn:[1] },
     { id:'6e', text:'Decke nach unten zur Außenluft – Bekleidung/Dämmung erneuert',                        hoch:0.24, niedrig:0.35, fn:[1,5] },
   ],
   fussnoten: {
-    1: 'Bei technisch begrenzter Dämmschichtdicke gilt die Anforderung als erfüllt, wenn die höchstmögliche Dämmschichtdicke mit λ = 0,035 W/(mK) eingebaut wird (eingeblasene Dämmstoffe in Hohlräume und nachwachsende Rohstoffe: λ = 0,045 W/(mK)).',
+    1: 'Ist die Dämmschichtdicke aus technischen Gründen begrenzt, gilt die Anforderung als erfüllt, wenn die nach den anerkannten Regeln der Technik höchstmögliche Dämmschichtdicke mit λ = 0,035 W/(mK) eingebaut wird (in Hohlräume eingeblasene Dämmstoffe und nachwachsende Rohstoffe: λ = 0,045 W/(mK)). Bei Nr. 5b gilt das auch für Zwischensparrendämmung, wenn die Dicke durch innenseitige Bekleidung oder Sparrenhöhe begrenzt ist.',
     2: 'Entfällt, wenn die Außenwand nach dem 31.12.1983 unter energiesparrechtlichen Vorschriften errichtet oder erneuert wurde.',
     5: 'Entfällt, wenn die Bauteilfläche nach dem 31.12.1983 unter energiesparrechtlichen Vorschriften errichtet oder erneuert wurde.'
   },
@@ -125,94 +126,111 @@ const RICHTUNG_LABEL = { horizontal:'horizontal', aufwaerts:'aufwärts', abwaert
 // Beispielaufbauten (innen → außen). Schicht: [Typ, Baustoff aus BAUSTOFFE oder '', Name, d in cm]
 const BEISPIELE = [
   { titel: 'Außenwand KS + WDVS (EPS 035)', f: { bauteil: 'aussenwand' }, s: [
-    ['baustoff', 'Gipsputz', '', 1.5], ['baustoff', 'Kalksandstein KS 1800', '', 17.5],
-    ['baustoff', 'EPS (Styropor) 035', '', 14], ['baustoff', 'Kalkzementputz', '', 1] ]},
-  { titel: 'Außenwand Porenbeton monolithisch', f: { bauteil: 'aussenwand' }, s: [
-    ['baustoff', 'Gipsputz', '', 1], ['baustoff', 'Porenbeton PP 2-0,35', '', 36.5], ['baustoff', 'Kalkzementputz', '', 2] ]},
-  { titel: 'Steildach Zwischensparren mit Dampfbremse', f: { bauteil: 'steildach', 'inhom-aktiv': true, 'inhom-nr': '4',
-      'inhom-name': 'KVH / BSH (C24)', 'inhom-lambda': '0.13', 'inhom-fa': '0.88', 'inhom-fb': '0.12' }, s: [
-    ['baustoff', 'Gipskartonplatte (GKB)', '', 1.25], ['luft_ruhend', '', 'Installationsebene (ruhende Luft)', 2.5],
-    ['baustoff', 'Dampfbremse (s_d ≈ 2 m)', '', 0.02],
+    ['baustoff', 'Gipsputz (1400)', '', 1.5], ['baustoff', 'Kalksandstein (1800)', '', 17.5],
+    ['baustoff', 'EPS (Styropor) 035', '', 14], ['baustoff', 'Kalk-/Kalkzementputz (1800)', '', 1] ]},
+  { titel: 'Außenwand Porenbeton monolithisch 36,5 cm', f: { bauteil: 'aussenwand' }, s: [
+    ['baustoff', 'Gipsputz (1400)', '', 1], ['baustoff', 'Porenbeton-Planstein PP (350)', '', 36.5], ['baustoff', 'Leichtputz (≤ 1000)', '', 2] ]},
+  { titel: 'Steildach Zwischensparren mit PE-Dampfbremse', f: { bauteil: 'steildach', 'inhom-aktiv': true, 'inhom-nr': '4',
+      'inhom-name': 'Nadelholz / KVH (500)', 'inhom-lambda': '0.13', 'inhom-fa': '0.88', 'inhom-fb': '0.12' }, s: [
+    ['baustoff', 'Gipskartonplatte (900)', '', 1.25], ['luft_ruhend', '', 'Installationsebene (ruhende Luft)', 2.5],
+    ['baustoff', 'PE-Folie 0,15 mm (s_d = 50 m)', '', 0.015],
     ['baustoff', 'Mineralwolle (MW) 035', '', 20], ['baustoff', 'Holzfaserdämmplatte (WF) 045', '', 6] ]},
   { titel: 'Steildach ohne Dampfbremse (Tauwasser!)', f: { bauteil: 'steildach', 'inhom-aktiv': true, 'inhom-nr': '3',
-      'inhom-name': 'KVH / BSH (C24)', 'inhom-lambda': '0.13', 'inhom-fa': '0.88', 'inhom-fb': '0.12' }, s: [
-    ['baustoff', 'Gipskartonplatte (GKB)', '', 1.25], ['luft_ruhend', '', 'Installationsebene (ruhende Luft)', 2.5],
+      'inhom-name': 'Nadelholz / KVH (500)', 'inhom-lambda': '0.13', 'inhom-fa': '0.88', 'inhom-fb': '0.12' }, s: [
+    ['baustoff', 'Gipskartonplatte (900)', '', 1.25], ['luft_ruhend', '', 'Installationsebene (ruhende Luft)', 2.5],
     ['baustoff', 'Mineralwolle (MW) 035', '', 20], ['baustoff', 'Holzfaserdämmplatte (WF) 045', '', 6] ]},
   { titel: 'Flachdach Warmdach (PUR/PIR)', f: { bauteil: 'flachdach' }, s: [
-    ['baustoff', 'Stahlbeton (2500)', '', 20], ['baustoff', 'Dampfsperre Bitumen mit Alu (s_d ≈ 1500 m)', '', 0.4],
-    ['baustoff', 'PUR/PIR 024', '', 16], ['baustoff', 'Bitumen-Abdichtung (s_d ≈ 300 m)', '', 1] ]},
+    ['baustoff', 'Stahlbeton (2300, 1 % Stahl)', '', 20], ['baustoff', 'Aluminiumfolie 0,05 mm (s_d = 1500 m)', '', 0.005],
+    ['baustoff', 'PUR/PIR 024', '', 16], ['baustoff', 'Bitumendachbahn DIN EN 13707', '', 0.8] ]},
   { titel: 'Innendämmung ohne Dampfbremse (Tauwasser!)', f: { bauteil: 'aussenwand' }, s: [
-    ['baustoff', 'Gipskartonplatte (GKB)', '', 1.25], ['baustoff', 'Mineralwolle (MW) 035', '', 6],
-    ['baustoff', 'Vollziegel VMz 1800', '', 24], ['baustoff', 'Kalkzementputz', '', 2] ]},
+    ['baustoff', 'Gipskartonplatte (900)', '', 1.25], ['baustoff', 'Mineralwolle (MW) 035', '', 6],
+    ['baustoff', 'Vollziegel (1800)', '', 24], ['baustoff', 'Kalk-/Kalkzementputz (1800)', '', 2] ]},
   { titel: 'Kellerdecke, unterseitig gedämmt', f: { bauteil: 'kellerdecke' }, s: [
-    ['baustoff', 'Zementestrich (ZE)', '', 5], ['baustoff', 'EPS (Styropor) 040', '', 3],
-    ['baustoff', 'Stahlbeton (2500)', '', 18], ['baustoff', 'Mineralwolle (MW) 035', '', 10] ]},
+    ['baustoff', 'Zementestrich (2000)', '', 5], ['baustoff', 'EPS (Styropor) 040', '', 3],
+    ['baustoff', 'Stahlbeton (2300, 1 % Stahl)', '', 18], ['baustoff', 'Mineralwolle (MW) 035', '', 10] ]},
   { titel: 'Altbau: Vollziegel ungedämmt', f: { bauteil: 'aussenwand' }, s: [
-    ['baustoff', 'Kalkputz', '', 1.5], ['baustoff', 'Vollziegel VMz 1800', '', 24], ['baustoff', 'Kalkzementputz', '', 2] ]},
+    ['baustoff', 'Kalk-/Kalkzementputz (1800)', '', 1.5], ['baustoff', 'Vollziegel (1800)', '', 24], ['baustoff', 'Kalk-/Kalkzementputz (1800)', '', 2] ]},
 ];
 
-// Baustoff-Datenbank: λ-Bemessungswert [W/(mK)], Wasserdampf-Diffusionswiderstandszahl μ [–]
-// (ein typischer Wert aus dem Tabellenbereich), bei Bahnen zusätzlich übliche Dicke d [cm].
-// Schneider Bautabellen, 26. Auflage – G (aus dem Gedächtnis, prüfen!)
+// Baustoff-Datenbank
+// lambda: Bemessungswert λ_B [W/(mK)] (null = keine Angabe, R wird vernachlässigt)
+// mu / muMax: Richtwert der Wasserdampf-Diffusionswiderstandszahl (Tabellenbereich a/b);
+//   laut Tafel-Fußnote ist jeweils der für die Baukonstruktion ungünstigere Wert zu wählen.
+// sd + d: Folien mit s_d-Angabe [m] bei Dicke d [cm] – μ = s_d / d wird unten berechnet.
+// q: 'Z' = abgeglichen mit Schneider Bautabellen 26, Tafel 4.33 (S. 4.33–4.42),
+//    'G' = noch nicht abgeglichen (aus dem Gedächtnis, prüfen!)
 const BAUSTOFFE = [
   { gruppe: 'Dämmstoffe', stoffe: [
-    { name: 'Mineralwolle (MW) 035', lambda: 0.035, mu: 1 },
-    { name: 'Mineralwolle (MW) 040', lambda: 0.040, mu: 1 },
-    { name: 'EPS (Styropor) 035', lambda: 0.035, mu: 50 },
-    { name: 'EPS (Styropor) 040', lambda: 0.040, mu: 50 },
-    { name: 'XPS 035', lambda: 0.035, mu: 100 },
-    { name: 'XPS 040', lambda: 0.040, mu: 100 },
-    { name: 'PUR/PIR 024', lambda: 0.024, mu: 50 },
-    { name: 'PUR/PIR 028', lambda: 0.028, mu: 50 },
-    { name: 'Holzfaserdämmplatte (WF) 040', lambda: 0.040, mu: 5 },
-    { name: 'Holzfaserdämmplatte (WF) 045', lambda: 0.045, mu: 5 },
-    { name: 'Zellulose-Einblasdämmung 040', lambda: 0.040, mu: 2 },
-    { name: 'Schaumglas (CG) 050', lambda: 0.050, mu: 100000 },
+    { name: 'Mineralwolle (MW) 035', lambda: 0.035, mu: 1, q: 'G' },
+    { name: 'Mineralwolle (MW) 040', lambda: 0.040, mu: 1, q: 'G' },
+    { name: 'EPS (Styropor) 035', lambda: 0.035, mu: 50, q: 'G' },
+    { name: 'EPS (Styropor) 040', lambda: 0.040, mu: 50, q: 'G' },
+    { name: 'XPS 035', lambda: 0.035, mu: 100, q: 'G' },
+    { name: 'XPS 040', lambda: 0.040, mu: 100, q: 'G' },
+    { name: 'PUR/PIR 024', lambda: 0.024, mu: 50, q: 'G' },
+    { name: 'PUR/PIR 028', lambda: 0.028, mu: 50, q: 'G' },
+    { name: 'Holzfaserdämmplatte (WF) 040', lambda: 0.040, mu: 5, q: 'G' },
+    { name: 'Holzfaserdämmplatte (WF) 045', lambda: 0.045, mu: 5, q: 'G' },
+    { name: 'Zellulose-Einblasdämmung 040', lambda: 0.040, mu: 2, q: 'G' },
+    { name: 'Schaumglas (CG) 050', lambda: 0.050, mu: 100000, q: 'G' },
   ]},
   { gruppe: 'Mauerwerk', stoffe: [
-    { name: 'Kalksandstein KS 1800', lambda: 0.99, mu: 20 },
-    { name: 'Kalksandstein KS 2000', lambda: 1.10, mu: 20 },
-    { name: 'Porenbeton PP 2-0,35', lambda: 0.09, mu: 5 },
-    { name: 'Porenbeton PP 4-0,55', lambda: 0.16, mu: 5 },
-    { name: 'Hochlochziegel HLz 12-0,7', lambda: 0.70, mu: 5 },
-    { name: 'Vollziegel VMz 1800', lambda: 0.81, mu: 10 },
-    { name: 'Leichtbetonstein Vbl 800', lambda: 0.39, mu: 5 },
+    { name: 'Kalksandstein (1400)', lambda: 0.70, mu: 5, muMax: 10, q: 'Z' },
+    { name: 'Kalksandstein (1800)', lambda: 0.99, mu: 15, muMax: 25, q: 'Z' },
+    { name: 'Kalksandstein (2000)', lambda: 1.1, mu: 15, muMax: 25, q: 'Z' },
+    { name: 'Porenbeton-Planstein PP (350)', lambda: 0.11, mu: 5, muMax: 10, q: 'Z' },
+    { name: 'Porenbeton-Planstein PP (500)', lambda: 0.16, mu: 5, muMax: 10, q: 'Z' },
+    { name: 'Porenbeton-Planstein PP (600)', lambda: 0.19, mu: 5, muMax: 10, q: 'Z' },
+    { name: 'Vollziegel (1400)', lambda: 0.58, mu: 5, muMax: 10, q: 'Z' },
+    { name: 'Vollziegel (1800)', lambda: 0.81, mu: 5, muMax: 10, q: 'Z' },
+    { name: 'Hochlochziegel HLzA/B (700, Normalmörtel)', lambda: 0.36, mu: 5, muMax: 10, q: 'Z' },
+    { name: 'Hochlochziegel HLzA/B (700, Leichtmörtel LM21)', lambda: 0.31, mu: 5, muMax: 10, q: 'Z' },
+    { name: 'Hochlochziegel HLzW (700, Leichtmörtel LM21)', lambda: 0.21, mu: 5, muMax: 10, q: 'Z' },
+    { name: 'Vollklinker (1800)', lambda: 0.81, mu: 50, muMax: 100, q: 'Z' },
   ]},
   { gruppe: 'Beton', stoffe: [
-    { name: 'Normalbeton C20/25 (2400)', lambda: 2.10, mu: 100 },
-    { name: 'Stahlbeton (2500)', lambda: 2.30, mu: 100 },
-    { name: 'Leichtbeton 1200', lambda: 0.56, mu: 10 },
-    { name: 'Leichtbeton 1600', lambda: 0.81, mu: 15 },
+    { name: 'Normalbeton (2400, unbewehrt)', lambda: 2.0, mu: 80, muMax: 130, q: 'Z' },
+    { name: 'Stahlbeton (2300, 1 % Stahl)', lambda: 2.3, mu: 80, muMax: 130, q: 'Z' },
+    { name: 'Stahlbeton (2400, 2 % Stahl)', lambda: 2.5, mu: 80, muMax: 130, q: 'Z' },
+    { name: 'Leichtbeton, geschlossenes Gefüge (1200)', lambda: 0.62, mu: 70, muMax: 150, q: 'Z' },
+    { name: 'Leichtbeton, geschlossenes Gefüge (1600)', lambda: 1.00, mu: 70, muMax: 150, q: 'Z' },
   ]},
   { gruppe: 'Holz / Holzwerkstoffe', stoffe: [
-    { name: 'Nadelholz (Fichte, Kiefer)', lambda: 0.13, mu: 40 },
-    { name: 'KVH / BSH (C24)', lambda: 0.13, mu: 40 },
-    { name: 'Laubholz (Eiche, Buche)', lambda: 0.20, mu: 50 },
-    { name: 'OSB-Platte', lambda: 0.13, mu: 50 },
-    { name: 'Spanplatte', lambda: 0.13, mu: 50 },
-    { name: 'MDF-Platte', lambda: 0.14, mu: 20 },
+    { name: 'Nadelholz / KVH (500)', lambda: 0.13, mu: 20, muMax: 50, q: 'Z' },
+    { name: 'Laubholz (700)', lambda: 0.18, mu: 50, muMax: 200, q: 'Z' },
+    { name: 'Sperrholz (500)', lambda: 0.13, mu: 70, muMax: 200, q: 'Z' },
+    { name: 'OSB-Platte (650)', lambda: 0.13, mu: 30, muMax: 50, q: 'Z' },
+    { name: 'Spanplatte (600)', lambda: 0.14, mu: 15, muMax: 50, q: 'Z' },
+    { name: 'Holzfaserplatte / MDF (600)', lambda: 0.14, mu: 12, muMax: 20, q: 'Z' },
+    { name: 'Holzfaserplatte (250)', lambda: 0.07, mu: 3, muMax: 5, q: 'Z' },
   ]},
   { gruppe: 'Putze / Mörtel / Estriche', stoffe: [
-    { name: 'Kalkzementputz', lambda: 1.00, mu: 20 },
-    { name: 'Kalkputz', lambda: 0.87, mu: 10 },
-    { name: 'Gipsputz', lambda: 0.51, mu: 10 },
-    { name: 'Wärmedämmputz (WDP)', lambda: 0.14, mu: 10 },
-    { name: 'Zementestrich (ZE)', lambda: 1.40, mu: 20 },
-    { name: 'Calciumsulfatestrich (CAF)', lambda: 1.20, mu: 15 },
+    { name: 'Kalk-/Kalkzementputz (1800)', lambda: 1.0, mu: 15, muMax: 35, q: 'Z' },
+    { name: 'Gipsputz (1000)', lambda: 0.34, mu: 4, muMax: 10, q: 'Z' },
+    { name: 'Gipsputz (1400)', lambda: 0.51, mu: 4, muMax: 10, q: 'Z' },
+    { name: 'Leichtputz (≤ 1000)', lambda: 0.38, mu: 15, muMax: 20, q: 'Z' },
+    { name: 'Wärmedämmputz T1', lambda: 0.12, mu: 5, muMax: 20, q: 'Z' },
+    { name: 'Kunstharzputz (1100)', lambda: 0.70, mu: 50, muMax: 200, q: 'Z' },
+    { name: 'Zementestrich (2000)', lambda: 1.40, mu: 15, muMax: 35, q: 'Z' },
+    { name: 'Anhydritestrich (2100)', lambda: 1.20, mu: 15, muMax: 35, q: 'Z' },
+    { name: 'Calciumsulfat-Fließestrich (2100)', lambda: 1.4, mu: 15, muMax: 35, q: 'Z' },
   ]},
   { gruppe: 'Platten / Bekleidungen', stoffe: [
-    { name: 'Gipskartonplatte (GKB)', lambda: 0.25, mu: 8 },
-    { name: 'Gipsfaserplatte (GF)', lambda: 0.32, mu: 13 },
-    { name: 'Faserzementplatte', lambda: 0.58, mu: 50 },
+    { name: 'Gipskartonplatte (700)', lambda: 0.21, mu: 4, muMax: 10, q: 'Z' },
+    { name: 'Gipskartonplatte (900)', lambda: 0.25, mu: 4, muMax: 10, q: 'Z' },
+    { name: 'Gipsfaserplatte (GF)', lambda: 0.32, mu: 13, q: 'G' },
   ]},
   { gruppe: 'Folien / Bahnen', stoffe: [
-    { name: 'PE-Dampfsperre (s_d ≈ 100 m)', lambda: 0.40, mu: 500000, d: 0.02 },
-    { name: 'Dampfbremse (s_d ≈ 2 m)', lambda: 0.20, mu: 10000, d: 0.02 },
-    { name: 'Unterdeckbahn diffusionsoffen (s_d ≈ 0,02 m)', lambda: 0.20, mu: 40, d: 0.05 },
-    { name: 'Dampfsperre Bitumen mit Alu (s_d ≈ 1500 m)', lambda: 0.17, mu: 375000, d: 0.4 },
-    { name: 'Bitumen-Abdichtung (s_d ≈ 300 m)', lambda: 0.17, mu: 30000, d: 1 },
+    { name: 'PE-Folie 0,15 mm (s_d = 50 m)', lambda: null, sd: 50, d: 0.015, q: 'Z' },
+    { name: 'PE-Folie 0,25 mm (s_d = 100 m)', lambda: null, sd: 100, d: 0.025, q: 'Z' },
+    { name: 'Aluminiumfolie 0,05 mm (s_d = 1500 m)', lambda: null, sd: 1500, d: 0.005, q: 'Z' },
+    { name: 'Aluminiumverbundfolie 0,4 mm (s_d = 10 m)', lambda: null, sd: 10, d: 0.04, q: 'Z' },
+    { name: 'Bituminiertes Papier 0,1 mm (s_d = 2 m)', lambda: null, sd: 2, d: 0.01, q: 'Z' },
+    { name: 'Bitumendachbahn DIN EN 13707', lambda: 0.17, mu: 20000, d: 0.4, q: 'Z' },
   ]},
 ];
+// Folien mit s_d-Angabe: μ so, dass bei der Tabellendicke genau s_d herauskommt
+BAUSTOFFE.forEach(g => g.stoffe.forEach(s => { if (s.sd) s.mu = Math.round(s.sd / (s.d / 100)); }));
 
 // Feuchteschutz: Glaser-Verfahren nach DIN 4108-3:2018-10, Anhang A – G (prüfen!)
 // Tauperiode 90 Tage: innen 20 °C / 50 %, außen −5 °C / 80 %
