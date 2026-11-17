@@ -29,6 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
     fuelleAnl7();
   });
   $('gmodg-fall').addEventListener('change', () => fuelleAnl7($('gmodg-zeile').value));
+  if (EINGEBETTET) leerStart();
   fuelleAnl7();
 
   // Toggle-Felder
@@ -93,11 +94,36 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
+// ── Eingebettet in der Heizlast-App: keine Vorbelegungen ──────
+// Randbedingungen starten leer und müssen vor dem Berechnen gewählt werden.
+const LEER_FELDER = { bauteil: '', raum: '', richtung: '', 'theta-i': '', 'theta-e': '', 'din-ausgabe': '' };
+const PFLICHT = [['bauteil', 'Bauteil'], ['raum', 'Raumnutzung'], ['richtung', 'Wärmestromrichtung'], ['theta-i', 'θ_i'], ['theta-e', 'θ_e'],
+  ['din-ausgabe', 'Ausgabe DIN 4108-2'], ['gmodg-fall', 'Anforderung GModG'], ['gmodg-zeile', 'Maßnahme (Anlage 7)']];
+function leerStart() {
+  ['bauteil', 'raum', 'richtung', 'din-ausgabe', 'gmodg-fall'].forEach(id => {
+    const el = $(id);
+    if (![...el.options].some(o => o.value === '')) el.insertAdjacentHTML('afterbegin', '<option value="">— wählen —</option>');
+    el.value = '';
+  });
+  $('theta-i').value = ''; $('theta-e').value = '';
+  document.addEventListener('change', e => e.target.classList && e.target.classList.remove('fehlt'));
+  document.addEventListener('input', e => e.target.classList && e.target.classList.remove('fehlt'));
+}
+function pflichtFehlt() {
+  const fehlt = PFLICHT.filter(([id]) => {
+    if (id === 'gmodg-zeile' && $('gmodg-fall').value !== 'bestand') return false;
+    const el = $(id), leer = el.value === '' || (el.type === 'number' && isNaN(parseFloat(el.value)));
+    el.classList.toggle('fehlt', leer);
+    return leer;
+  });
+  return fehlt.map(([, t]) => t);
+}
+
 // ── GModG: passende Anlage-7-Zeilen zum Bauteil ───────────────
 function fuelleAnl7(wunsch) {
   const bt = BAUTEILE.find(b => b.id === $('bauteil').value);
   const z = $('gmodg-zeile');
-  z.innerHTML = '';
+  z.innerHTML = EINGEBETTET ? '<option value="">— wählen —</option>' : '';
   (bt ? bt.anl7 : []).forEach(id => {
     const r = GMODG.anl7.find(x => x.id === id);
     const o = document.createElement('option');
@@ -224,7 +250,8 @@ function ladeZustand(z) {
 
 function beispielZustand(b) {
   const bt = BAUTEILE.find(x => x.id === b.f.bauteil);
-  const f = { ...STANDARD, 'gmodg-fall': $('gmodg-fall').value, richtung: bt ? bt.richtung : 'horizontal', ...b.f };
+  const basis = EINGEBETTET ? { ...STANDARD, ...LEER_FELDER, 'gmodg-fall': $('gmodg-fall').value, 'gmodg-zeile': '' } : { ...STANDARD, 'gmodg-fall': $('gmodg-fall').value };
+  const f = { ...basis, richtung: bt ? bt.richtung : (EINGEBETTET ? '' : 'horizontal'), ...b.f };
   const s = b.s.map(([typ, stoff, name, d, mu, lam]) => {
     const st = BAUSTOFFE.flatMap(g => g.stoffe).find(x => x.name === stoff);
     const m = mu !== undefined ? mu : st ? st.mu : (typ === 'luft_ruhend' ? 1 : '');
@@ -352,6 +379,10 @@ function leseBef() {
 
 // ── Hauptberechnung ───────────────────────────────────────────
 function berechnen() {
+  if (EINGEBETTET) {
+    const fehlt = pflichtFehlt();
+    if (fehlt.length) { toast('Bitte zuerst eingeben bzw. wählen: ' + fehlt.join(', ') + '.'); $('ergebnis').hidden = true; _erg = null; return; }
+  }
   const bauteilId = $('bauteil').value;
   const raum = $('raum').value;
   const richtung = $('richtung').value;
