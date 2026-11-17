@@ -15,17 +15,17 @@ const summeR = (sch, ri) => sch.reduce((a, s) => a + schichtR(s, ri), 0);
 // ── Außenwand KS + WDVS: Gipsputz 1,5 / KS 1800 17,5 / EPS 035 14 / KZ-Putz 1 ──
 const wand = [schicht('Gipsputz (1400)', 1.5), schicht('Kalksandstein (1800)', 17.5), schicht('EPS (Styropor) 035', 14), schicht('Kalk-/Kalkzementputz (1800)', 1)];
 pruefe('R Gipsputz = 0,015/0,51', fmtR(schichtR(wand[0], 'horizontal')), '0,029');
-pruefe('R EPS = 0,14/0,035', fmtR(schichtR(wand[2], 'horizontal')), '4,000');
+pruefe('R EPS = 0,14/λ_B 0,036', fmtR(schichtR(wand[2], 'horizontal')), '3,889');
 const Rw = summeR(wand, 'horizontal');
-pruefe('ΣR Außenwand', fmtR(Rw), '4,216');
+pruefe('ΣR Außenwand = 0,029 + 0,177 + 3,889 + 0,010', fmtR(Rw), '4,105');
 const RTw = RSI_RSE.horizontal.rsi + Rw + RSI_RSE.horizontal.rse;
-pruefe('R_T Außenwand = 0,13 + ΣR + 0,04', fmtR(RTw), '4,386');
+pruefe('R_T Außenwand = 0,13 + ΣR + 0,04', fmtR(RTw), '4,275');
 pruefe('U Außenwand', fmtU(1 / RTw), '0,23');
 
 // Temperaturverlauf
 const tv = temperaturverlauf(wand.map(s => ({ ...s, R: schichtR(s, 'horizontal') })), 0.13, 0.04, RTw, 20, -5);
-pruefe('q = 25 / R_T', fmtQ(tv.q), '5,70');
-pruefe('θ_si = 20 − q·0,13', fmtT(tv.punkte[1].theta), '19,3');
+pruefe('q = 25 / 4,275', fmtQ(tv.q), '5,85');
+pruefe('θ_si = 20 − q·0,13', fmtT(tv.punkte[1].theta), '19,2');
 pruefe('Kontrolle: letzter Punkt = θ_e', Math.abs(tv.punkte[tv.punkte.length - 1].theta - (-5)) < 1e-9, true);
 pruefe('Punkte: θ_i, θ_si, 4 Schichten, θ_e', tv.punkte.length, 7);
 pruefe('Letzte Schicht ist θ_se', tv.punkte[5].stelle.includes('θ_se'), true);
@@ -35,12 +35,12 @@ const minW = pruefeMin('aussenwand', 'normal', Rw, '2013-02');
 pruefe('R_min Außenwand normal = 1,20', fmtR(minW.rmin), '1,200');
 pruefe('Außenwand erfüllt R_min', minW.ok, true);
 const schW = pruefeSchimmel(Rw);
-pruefe('f_Rsi Außenwand = 1 − 0,25/4,506', fmtR(schW.fRsi), '0,945');
+pruefe('f_Rsi Außenwand = 1 − 0,25/4,395', fmtR(schW.fRsi), '0,943');
 pruefe('θ_si (Norm) Außenwand', fmtT(schW.thetaSi), '18,6');
 
 // Korrekturwerte
 const dg = deltaUg(1, wand, RTw, 'horizontal', 3);
-pruefe('ΔU_g Stufe 1 = 0,01·(4,000/4,386)²', fmtDU(dg.wert), '0,0083');
+pruefe('ΔU_g Stufe 1 = 0,01·(3,889/4,275)²', fmtDU(dg.wert), '0,0083');
 pruefe('ΔU_g Stufe 0 = 0', deltaUg(0, wand, RTw, 'horizontal', 3).wert, 0);
 const df = deltaUf({ nf: 4, durchmesser: 6, lambdaF: 50, daemmNr: 3 }, wand, 'horizontal');
 pruefe('ΔU_f = 0,8·50·4·(π/4·0,006²)/0,14', fmtDU(df.wert), '0,0323');
@@ -68,11 +68,11 @@ pruefe('Luftschicht-Schicht 2,5 cm aufwärts', fmtR(schichtR({ typ: 'luft_ruhend
 const dach = [schicht('Gipskartonplatte (900)', 1.25), { typ: 'luft_ruhend', name: 'Luft', d: 2.5 },
   schicht('Mineralwolle (MW) 035', 20), schicht('Holzfaserdämmplatte (WF) 045', 6)];
 const ih = inhomogenRT(dach, 0.10, 0.04, 'aufwaerts', { schichtNr: 3, lambdaB: 0.13, fa: 0.88, fb: 0.12 });
-pruefe('Inhomogen: R_j,eq = 1/(0,88/5,714 + 0,12/1,538)', fmtR(ih.RjEq), '4,310');
-pruefe("Inhomogen: unterer Grenzwert R''_T", fmtR(ih.RTUnten), '5,994');
-pruefe("Inhomogen: oberer Grenzwert R'_T", fmtU(ih.RTOben), '6,40');
+pruefe('Inhomogen: R_j,eq = 1/(0,88/5,556 + 0,12/1,538)', fmtR(ih.RjEq), '4,230');
+pruefe("Inhomogen: unterer Grenzwert R''_T", fmtR(ih.RTUnten), '5,857');
+pruefe("Inhomogen: oberer Grenzwert R'_T", fmtU(ih.RTOben), '6,23');
 pruefe('Inhomogen: Verhältnis ≤ 1,5', ih.gueltig, true);
-pruefe('Inhomogen: U Steildach', fmtU(1 / ih.RT), '0,16');
+pruefe('Inhomogen: U Steildach', fmtU(1 / ih.RT), '0,17');
 
 // ── Glaser (DIN 4108-3) ──
 pruefe('p_sat(20 °C) = 2337 Pa', Math.round(psat(20)), 2337);
@@ -81,20 +81,22 @@ pruefe('p_sat(0 °C) = 610,5 Pa', psat(0), 610.5);
 pruefe('p_sat(12 °C) = 1402 Pa', Math.round(psat(12)), 1402);
 
 const gW = glaser(wand, 'horizontal', false);
-pruefe('KS + WDVS: S_d = 4·0,015 + 15·0,175 + 50·0,14 + 15·0,01', fmtR(gW.Sd), '9,835');
+pruefe('KS + WDVS: S_d = 4·0,015 + 15·0,175 + 20·0,14 + 15·0,01', fmtR(gW.Sd), '5,635');
 pruefe('KS + WDVS: kein Tauwasser', gW.tauwasser, false);
 pruefe('KS + WDVS: Nachweis erfüllt', gW.ok, true);
 
 // Steildach ohne Dampfbremse (Gefach): Hand: θ_c = −0,45 °C, p_c = 588 Pa,
+// WF außen mit dem ungünstigeren μ = 5. θ_c = 20 − 25·6,016/7,332 = −0,51 °C, p_c = 585 Pa;
 // s_d innen = 4·0,0125 + 0,025 + 0,2 = 0,275 m, außen 5·0,06 = 0,3 m
-// m_c = 2,0e-10·7 776 000·[(1168,5−588,2)/0,275 − (588,2−320,9)/0,3] = 1,896 kg/m²
+// m_c = 2,0e-10·7 776 000·[(1168,5−585,3)/0,275 − (585,3−320,9)/0,3] = 1,93 kg/m²
 dach[1].mu = 1;
+dach[3].mu = 5;
 const gD = glaser(dach, 'aufwaerts', true);
 pruefe('Steildach ohne DB: eine Tauwasserebene', gD.ebenen.length, 1);
 pruefe('Steildach ohne DB: Ebene zwischen MW und WF (Grenzfläche 3)', gD.ebenen[0].k, 3);
-pruefe('Steildach ohne DB: θ_c', gD.ebenen[0].theta.toFixed(2), '-0.45');
-pruefe('Steildach ohne DB: p_c', Math.round(gD.ebenen[0].p), 588);
-pruefe('Steildach ohne DB: m_c', fmtU(gD.mc), '1,90');
+pruefe('Steildach ohne DB: θ_c', gD.ebenen[0].theta.toFixed(2), '-0.51');
+pruefe('Steildach ohne DB: p_c', Math.round(gD.ebenen[0].p), 585);
+pruefe('Steildach ohne DB: m_c', fmtU(gD.mc), '1,93');
 pruefe('Steildach ohne DB: m_c > 1,0 → nicht zulässig', gD.ok, false);
 pruefe('Massenbilanz: m_c = Summe der Ebenen', Math.abs(gD.mc - gD.ebenen.reduce((a, e) => a + e.mc, 0)) < 1e-12, true);
 
@@ -138,6 +140,10 @@ pruefe('Taf. 4.33: Kalksandstein 1800 λ 0,99, μ 15/25', [st('Kalksandstein (18
 pruefe('Taf. 4.33: Stahlbeton 1 % Stahl λ 2,3, μ 80/130', [st('Stahlbeton (2300, 1 % Stahl)').lambda, st('Stahlbeton (2300, 1 % Stahl)').mu, st('Stahlbeton (2300, 1 % Stahl)').muMax].join(), '2.3,80,130');
 pruefe('Taf. 4.33: Gipskartonplatte 900 λ 0,25, μ 4/10', [st('Gipskartonplatte (900)').lambda, st('Gipskartonplatte (900)').mu, st('Gipskartonplatte (900)').muMax].join(), '0.25,4,10');
 pruefe('Taf. 4.33: Porenbeton-Planstein 350 λ 0,11', st('Porenbeton-Planstein PP (350)').lambda, 0.11);
+pruefe('Taf. 4.43: MW 035 → λ_B 0,036, μ 1', [st('Mineralwolle (MW) 035').lambda, st('Mineralwolle (MW) 035').mu].join(), '0.036,1');
+pruefe('Taf. 4.43: WF 045 → λ_B 0,047, μ 3/5', [st('Holzfaserdämmplatte (WF) 045').lambda, st('Holzfaserdämmplatte (WF) 045').mu, st('Holzfaserdämmplatte (WF) 045').muMax].join(), '0.047,3,5');
+pruefe('Taf. 4.43: XPS 035 → λ_B 0,036, μ 80/250', [st('XPS 035').lambda, st('XPS 035').mu, st('XPS 035').muMax].join(), '0.036,80,250');
+pruefe('Dämmstoffe mit λ_D: λ_B > λ_D', BAUSTOFFE.flatMap(g => g.stoffe).filter(s => s.lambdaD).every(s => s.lambda > s.lambdaD), true);
 pruefe('Taf. 4.33: Aluminiumfolie s_d = 1500 m', Math.round(st('Aluminiumfolie 0,05 mm (s_d = 1500 m)').mu * 0.005 / 100), 1500);
 pruefe('Anlage 7: Fußnote 1 gilt für Nr. 1a, 1b, 5a–5c, 6a–6e', GMODG.anl7.every(z => z.fn.includes(1)), true);
 pruefe('Beispiele nutzen nur vorhandene Baustoffe',

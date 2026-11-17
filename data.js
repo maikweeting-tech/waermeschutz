@@ -123,7 +123,8 @@ const U_TYPISCH = {
 // Richtungslabels
 const RICHTUNG_LABEL = { horizontal:'horizontal', aufwaerts:'aufwärts', abwaerts:'abwärts' };
 
-// Beispielaufbauten (innen → außen). Schicht: [Typ, Baustoff aus BAUSTOFFE oder '', Name, d in cm]
+// Beispielaufbauten (innen → außen). Schicht: [Typ, Baustoff aus BAUSTOFFE oder '', Name, d in cm, μ (optional,
+// sonst der kleinere Tabellenwert – hier gesetzt, wo außen der größere Wert ungünstiger ist)]
 const BEISPIELE = [
   { titel: 'Außenwand KS + WDVS (EPS 035)', f: { bauteil: 'aussenwand' }, s: [
     ['baustoff', 'Gipsputz (1400)', '', 1.5], ['baustoff', 'Kalksandstein (1800)', '', 17.5],
@@ -134,11 +135,11 @@ const BEISPIELE = [
       'inhom-name': 'Nadelholz / KVH (500)', 'inhom-lambda': '0.13', 'inhom-fa': '0.88', 'inhom-fb': '0.12' }, s: [
     ['baustoff', 'Gipskartonplatte (900)', '', 1.25], ['luft_ruhend', '', 'Installationsebene (ruhende Luft)', 2.5],
     ['baustoff', 'PE-Folie 0,15 mm (s_d = 50 m)', '', 0.015],
-    ['baustoff', 'Mineralwolle (MW) 035', '', 20], ['baustoff', 'Holzfaserdämmplatte (WF) 045', '', 6] ]},
+    ['baustoff', 'Mineralwolle (MW) 035', '', 20], ['baustoff', 'Holzfaserdämmplatte (WF) 045', '', 6, 5] ]},
   { titel: 'Steildach ohne Dampfbremse (Tauwasser!)', f: { bauteil: 'steildach', 'inhom-aktiv': true, 'inhom-nr': '3',
       'inhom-name': 'Nadelholz / KVH (500)', 'inhom-lambda': '0.13', 'inhom-fa': '0.88', 'inhom-fb': '0.12' }, s: [
     ['baustoff', 'Gipskartonplatte (900)', '', 1.25], ['luft_ruhend', '', 'Installationsebene (ruhende Luft)', 2.5],
-    ['baustoff', 'Mineralwolle (MW) 035', '', 20], ['baustoff', 'Holzfaserdämmplatte (WF) 045', '', 6] ]},
+    ['baustoff', 'Mineralwolle (MW) 035', '', 20], ['baustoff', 'Holzfaserdämmplatte (WF) 045', '', 6, 5] ]},
   { titel: 'Flachdach Warmdach (PUR/PIR)', f: { bauteil: 'flachdach' }, s: [
     ['baustoff', 'Stahlbeton (2300, 1 % Stahl)', '', 20], ['baustoff', 'Aluminiumfolie 0,05 mm (s_d = 1500 m)', '', 0.005],
     ['baustoff', 'PUR/PIR 024', '', 16], ['baustoff', 'Bitumendachbahn DIN EN 13707', '', 0.8] ]},
@@ -160,19 +161,27 @@ const BEISPIELE = [
 // q: 'Z' = abgeglichen mit Schneider Bautabellen 26, Tafel 4.33 (S. 4.33–4.42),
 //    'G' = noch nicht abgeglichen (aus dem Gedächtnis, prüfen!)
 const BAUSTOFFE = [
+  // Dämmstoffe nach harmonisierten Normen: Name = Nennwert λ_D (Wärmeleitstufe),
+  // gerechnet wird mit dem Bemessungswert λ_B (Schneider 26, Tafel 4.43)
   { gruppe: 'Dämmstoffe', stoffe: [
-    { name: 'Mineralwolle (MW) 035', lambda: 0.035, mu: 1, q: 'G' },
-    { name: 'Mineralwolle (MW) 040', lambda: 0.040, mu: 1, q: 'G' },
-    { name: 'EPS (Styropor) 035', lambda: 0.035, mu: 50, q: 'G' },
-    { name: 'EPS (Styropor) 040', lambda: 0.040, mu: 50, q: 'G' },
-    { name: 'XPS 035', lambda: 0.035, mu: 100, q: 'G' },
-    { name: 'XPS 040', lambda: 0.040, mu: 100, q: 'G' },
-    { name: 'PUR/PIR 024', lambda: 0.024, mu: 50, q: 'G' },
-    { name: 'PUR/PIR 028', lambda: 0.028, mu: 50, q: 'G' },
-    { name: 'Holzfaserdämmplatte (WF) 040', lambda: 0.040, mu: 5, q: 'G' },
-    { name: 'Holzfaserdämmplatte (WF) 045', lambda: 0.045, mu: 5, q: 'G' },
+    { name: 'Mineralwolle (MW) 032', lambdaD: 0.032, lambda: 0.033, mu: 1, q: 'Z', tafel: '4.43' },
+    { name: 'Mineralwolle (MW) 035', lambdaD: 0.035, lambda: 0.036, mu: 1, q: 'Z', tafel: '4.43' },
+    { name: 'Mineralwolle (MW) 040', lambdaD: 0.040, lambda: 0.041, mu: 1, q: 'Z', tafel: '4.43' },
+    { name: 'EPS (Styropor) 032', lambdaD: 0.032, lambda: 0.033, mu: 20, muMax: 100, q: 'Z', tafel: '4.43' },
+    { name: 'EPS (Styropor) 035', lambdaD: 0.035, lambda: 0.036, mu: 20, muMax: 100, q: 'Z', tafel: '4.43' },
+    { name: 'EPS (Styropor) 040', lambdaD: 0.040, lambda: 0.041, mu: 20, muMax: 100, q: 'Z', tafel: '4.43' },
+    { name: 'XPS 035', lambdaD: 0.035, lambda: 0.036, mu: 80, muMax: 250, q: 'Z', tafel: '4.43' },
+    { name: 'XPS 040', lambdaD: 0.040, lambda: 0.041, mu: 80, muMax: 250, q: 'Z', tafel: '4.43' },
+    { name: 'PUR/PIR 024', lambdaD: 0.024, lambda: 0.025, mu: 40, muMax: 200, q: 'Z', tafel: '4.43' },
+    { name: 'PUR/PIR 028', lambdaD: 0.028, lambda: 0.029, mu: 40, muMax: 200, q: 'Z', tafel: '4.43' },
+    { name: 'Phenolharz-Hartschaum (PF) 022', lambdaD: 0.022, lambda: 0.023, mu: 10, muMax: 60, q: 'Z', tafel: '4.43' },
+    { name: 'Holzfaserdämmplatte (WF) 040', lambdaD: 0.040, lambda: 0.042, mu: 3, muMax: 5, q: 'Z', tafel: '4.43' },
+    { name: 'Holzfaserdämmplatte (WF) 045', lambdaD: 0.045, lambda: 0.047, mu: 3, muMax: 5, q: 'Z', tafel: '4.43' },
+    { name: 'Expandierter Kork (ICB) 040', lambdaD: 0.040, lambda: 0.042, mu: 5, muMax: 10, q: 'Z', tafel: '4.43' },
+    { name: 'Holzwolle-Leichtbauplatte (WW) 090', lambdaD: 0.090, lambda: 0.095, mu: 2, muMax: 5, q: 'Z', tafel: '4.43' },
+    { name: 'Blähperlit (EPB) 050', lambdaD: 0.050, lambda: 0.052, mu: 5, q: 'Z', tafel: '4.43' },
+    { name: 'Schaumglas (CG) 050', lambdaD: 0.050, lambda: 0.052, mu: 1000000, dicht: true, q: 'Z', tafel: '4.43' },
     { name: 'Zellulose-Einblasdämmung 040', lambda: 0.040, mu: 2, q: 'G' },
-    { name: 'Schaumglas (CG) 050', lambda: 0.050, mu: 100000, q: 'G' },
   ]},
   { gruppe: 'Mauerwerk', stoffe: [
     { name: 'Kalksandstein (1400)', lambda: 0.70, mu: 5, muMax: 10, q: 'Z' },

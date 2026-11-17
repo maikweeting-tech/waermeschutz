@@ -102,7 +102,7 @@ function stoffOptionen() {
     h += `<optgroup label="${esc(g.gruppe)}">`;
     g.stoffe.forEach(s => {
       const teile = [esc(s.name)];
-      if (s.lambda) teile.push('λ ' + (s.lambda < 0.1 ? s.lambda.toFixed(3) : s.lambda.toFixed(2)).replace('.', ','));
+      if (s.lambda) teile.push((s.lambdaD ? 'λ_B ' : 'λ ') + (s.lambda < 0.1 ? s.lambda.toFixed(3) : s.lambda.toFixed(2)).replace('.', ','));
       if (!s.sd) teile.push('μ ' + muText(s));
       h += `<option value="${esc(s.name)}" data-lambda="${s.lambda || ''}" data-mu="${s.mu}" data-d="${s.d || ''}">${teile.join(' · ')}${s.q === 'G' ? ' (ungeprüft)' : ''}</option>`;
     });
@@ -126,11 +126,18 @@ function onStoff(sel) {
   tr.querySelector('.s-quelle').value = quelleText(st);
 }
 
-function muText(s) { return s.muMax ? `${s.mu.toLocaleString('de-DE')}/${s.muMax.toLocaleString('de-DE')}` : s.mu.toLocaleString('de-DE'); }
+function muText(s) {
+  if (s.dicht) return '∞ (praktisch dampfdicht)';
+  return s.muMax ? `${s.mu.toLocaleString('de-DE')}/${s.muMax.toLocaleString('de-DE')}` : s.mu.toLocaleString('de-DE');
+}
 function quelleText(s) {
   if (!s) return '';
   if (s.q !== 'Z') return 'ungeprüft';
-  return 'Schneider 26, Taf. 4.33' + (s.sd ? ` (s_d = ${String(s.sd).replace('.', ',')} m)` : s.muMax ? ` (μ ${muText(s)})` : '');
+  const zusatz = [];
+  if (s.lambdaD) zusatz.push(`λ_D ${s.lambdaD.toFixed(3).replace('.', ',')} → λ_B`);
+  if (s.sd) zusatz.push(`s_d = ${String(s.sd).replace('.', ',')} m`);
+  else if (s.muMax || s.dicht) zusatz.push(`μ ${muText(s)}`);
+  return `Schneider 26, Taf. ${s.tafel || '4.33'}` + (zusatz.length ? ` (${zusatz.join(', ')})` : '');
 }
 
 function addSchicht() {
@@ -202,9 +209,10 @@ function ladeZustand(z) {
 function beispielZustand(b) {
   const bt = BAUTEILE.find(x => x.id === b.f.bauteil);
   const f = { ...STANDARD, 'gmodg-fall': $('gmodg-fall').value, richtung: bt ? bt.richtung : 'horizontal', ...b.f };
-  const s = b.s.map(([typ, stoff, name, d]) => {
+  const s = b.s.map(([typ, stoff, name, d, mu]) => {
     const st = BAUSTOFFE.flatMap(g => g.stoffe).find(x => x.name === stoff);
-    return [typ, stoff, name, String(d), st && st.lambda ? String(st.lambda) : '', quelleText(st), st ? String(st.mu) : (typ === 'luft_ruhend' ? '1' : '')];
+    const m = mu !== undefined ? mu : st ? st.mu : (typ === 'luft_ruhend' ? 1 : '');
+    return [typ, stoff, name, String(d), st && st.lambda ? String(st.lambda) : '', quelleText(st), String(m)];
   });
   return { f, s };
 }
