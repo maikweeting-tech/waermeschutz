@@ -3,7 +3,7 @@
    Quellen-Kürzel: Z = zitiert, G = aus dem Gedächtnis – prüfen! */
 
 // Wärmeübergangswiderstände [m²K/W]
-// DIN EN ISO 6946:2018-03, Tabelle 7 (Wärmeschutz, nicht Feuchteschutz) – Z
+// DIN EN ISO 6946:2018-03, Tabelle 7 (Wärmeschutz, nicht Feuchteschutz) – Z, Schneider 26, Tafel 4.4a
 const RSI_RSE = {
   horizontal: { rsi: 0.13, rse: 0.04 },
   aufwaerts:  { rsi: 0.10, rse: 0.04 },
@@ -105,7 +105,8 @@ const DELTA_UG = { 0: 0, 1: 0.01, 2: 0.04 };
 
 // Schimmelnachweis (Mindestwärmeschutz an der inneren Oberfläche)
 // DIN 4108-2, Abschnitt 6.2: f_Rsi ≥ 0,70 bei θ_i = 20 °C, φ_i = 50 %, θ_e = −5 °C,
-// R_si = 0,25 m²K/W (erhöht, Feuchteschutz), R_se = 0,04 m²K/W → θ_si ≥ 12,6 °C – G
+// R_si = 0,25 m²K/W (erhöht, Feuchteschutz), R_se = 0,04 m²K/W → θ_si ≥ 12,6 °C
+// R_si/R_se: Z (Schneider 26, Tafel 4.4a); f_Rsi, θ-Randbedingungen: G
 const SCHIMMEL = { rsi: 0.25, rse: 0.04, fmin: 0.70, ti: 20, te: -5, phi: 50, thetaMin: 12.6 };
 
 // α für Befestigungselemente (volle Durchdringung) – G
@@ -242,15 +243,16 @@ const BAUSTOFFE = [
 // Folien mit s_d-Angabe: μ so, dass bei der Tabellendicke genau s_d herauskommt
 BAUSTOFFE.forEach(g => g.stoffe.forEach(s => { if (s.sd) s.mu = Math.round(s.sd / (s.d / 100)); }));
 
-// Feuchteschutz: Glaser-Verfahren nach DIN 4108-3:2018-10, Anhang A – G (prüfen!)
-// Tauperiode 90 Tage: innen 20 °C / 50 %, außen −5 °C / 80 %
-// Verdunstungsperiode 90 Tage: innen 20 °C / 50 %, außen 12 °C / 70 %;
-// Dächer: Außenoberfläche 20 °C. Grenzwerte: m_c ≤ 1,0 kg/m² (0,5 kg/m² an nicht
-// kapillar wasseraufnahmefähigen Schichten), m_ev ≥ m_c.
+// Feuchteschutz: Glaser-Verfahren nach DIN 4108-3 – Z (Schneider 26, Tafel 4.29b, Tafel 4.4a,
+// Abschnitt 3.5.1); nur δ0 ist noch G (Tafel 4.30 fehlt)
+// Tauperiode Dez.–Feb., 90 d = 2160 h: innen 20 °C / 50 % (1168 Pa), außen −5 °C / 80 % (321 Pa)
+// Verdunstungsperiode Juni–Aug., 90 d: p_i = p_e = 1200 Pa; im Tauwasserbereich p_s = 1700 Pa
+// (Außenwände, Decken gegen Dachraum) bzw. 2000 Pa (Dächer). R_si = 0,25, R_se = 0,04.
+// Grenzwerte: M_c ≤ M_ev; M_c ≤ 1,0 kg/m² (0,5 kg/m² an kapillar nicht wasseraufnahmefähigen Schichten).
 const GLASER = {
   rsi: 0.25, rse: 0.04,
   tau: { ti: 20, phiI: 0.50, te: -5, phiE: 0.80, stunden: 2160 },
-  verd: { ti: 20, phiI: 0.50, te: 12, phiE: 0.70, teDach: 20, stunden: 2160 },
-  delta0: 2.0e-10,       // Wasserdampf-Diffusionsleitkoeffizient der Luft [kg/(m·s·Pa)]
+  verd: { pI: 1200, pE: 1200, psWand: 1700, psDach: 2000, stunden: 2160 },
+  delta0: 2.0e-10,       // Wasserdampf-Diffusionsleitkoeffizient der Luft [kg/(m·s·Pa)] – G
   mcMax: 1.0, mcMaxNichtKapillar: 0.5
 };

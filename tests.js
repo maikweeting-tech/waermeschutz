@@ -98,6 +98,20 @@ pruefe('Steildach ohne DB: θ_c', gD.ebenen[0].theta.toFixed(2), '-0.51');
 pruefe('Steildach ohne DB: p_c', Math.round(gD.ebenen[0].p), 585);
 pruefe('Steildach ohne DB: m_c', fmtU(gD.mc), '1,93');
 pruefe('Steildach ohne DB: m_c > 1,0 → nicht zulässig', gD.ok, false);
+// Verdunstung nach Tafel 4.29b: Dach p_s = 2000 Pa, p_i = p_e = 1200 Pa
+// M_ev = 2,0e-10·7 776 000·(800/0,275 + 800/0,3) = 8,67 kg/m²
+pruefe('Steildach ohne DB: M_ev (Dach, p_s 2000 Pa)', fmtU(gD.mev), '8,67');
+pruefe('Steildach ohne DB: M_ev ≥ M_c', gD.okEv, true);
+
+// μ-Wahl nach Tafel 4.29a: GKB innen 4/10 → 4, WF außen 3/5 → 5 → gleiches Ergebnis wie oben
+const dachBereich = dach.map(s => s.name === 'Gipskartonplatte (900)' ? { ...s, mu: 4, muMin: 4, muMax: 10 }
+  : s.name === 'Holzfaserdämmplatte (WF) 045' ? { ...s, mu: 3, muMin: 3, muMax: 5 } : s);
+const gU = glaserUnguenstig(dachBereich, 'aufwaerts', true);
+pruefe('Tafel 4.29a: μ vor Taupunkt min, dahinter max', gU.mus.join(), '4,1,1,5');
+pruefe('Tafel 4.29a: M_c wie von Hand', fmtU(gU.mc), '1,93');
+const nurMin = glaser(dachBereich.map(s => ({ ...s, mu: s.muMin ?? s.mu })), 'aufwaerts', true);
+const nurMax = glaser(dachBereich.map(s => ({ ...s, mu: s.muMax ?? s.mu })), 'aufwaerts', true);
+pruefe('Tafel 4.29a: M_c ≥ alle min und ≥ alle max', gU.mc >= nurMin.mc && gU.mc >= nurMax.mc, true);
 pruefe('Massenbilanz: m_c = Summe der Ebenen', Math.abs(gD.mc - gD.ebenen.reduce((a, e) => a + e.mc, 0)) < 1e-12, true);
 
 const mitDB = [dach[0], dach[1], schicht('PE-Folie 0,15 mm (s_d = 50 m)', 0.015), dach[2], dach[3]];
@@ -112,6 +126,8 @@ const gI = glaser(innen, 'horizontal', false);
 pruefe('Innendämmung: Tauwasser zwischen MW und Ziegel', gI.ebenen.map(e => e.k).join(), '2');
 pruefe('Innendämmung: nicht zulässig', gI.ok, false);
 pruefe('Innendämmung: m_ev < m_c', gI.okEv, false);
+// Wand p_s = 1700 Pa: M_ev = 2,0e-10·7 776 000·(500/0,11 + 500/1,5) = 7,59 kg/m²
+pruefe('Innendämmung: M_ev (Wand, p_s 1700 Pa)', fmtU(gI.mev), '7,59');
 
 // ── GModG (§ 36 / Anlage 7, Anlage 1) ──
 pruefe('GModG: KS + WDVS U = 0,23 ≤ 0,24 (Nr. 1b)', pruefeGModG('bestand', 'aussenwand', '1b', 'normal', 1 / RTw).ok, true);

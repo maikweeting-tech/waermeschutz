@@ -191,23 +191,39 @@ function glaser(schichten, richtung, dach) {
   const ebenen = huelle.slice(1, -1).map((h, j) => ({ ...h, theta: theta[h.k], mc: (g[j] - g[j+1]) * sek(T.stunden) }));
   const mc = ebenen.reduce((a, e) => a + e.mc, 0);
 
-  // Verdunstungsperiode (Tauwasserzone von erster bis letzter Ebene)
+  // Verdunstungsperiode mit festen Dampfdrücken (Tafel 4.29b); Tauwasserzone = erste bis letzte Ebene
   let verd = null, mev = 0;
   if (ebenen.length) {
     const V = G.verd;
-    const thetaV = temp(V.ti, dach ? V.teDach : V.te);
-    const piV = V.phiI * psat(V.ti), peV = V.phiE * psat(V.te);
+    const pc = dach ? V.psDach : V.psWand;
     const a = ebenen[0], b = ebenen[ebenen.length-1];
-    const pcA = psat(thetaV[a.k]), pcB = psat(thetaV[b.k]);
-    const gI = Math.max(0, G.delta0 * (pcA - piV) / a.x);
-    const gE = Math.max(0, G.delta0 * (pcB - peV) / (Sd - b.x));
+    const gI = Math.max(0, G.delta0 * (pc - V.pI) / a.x);
+    const gE = Math.max(0, G.delta0 * (pc - V.pE) / (Sd - b.x));
     mev = (gI + gE) * sek(V.stunden);
-    verd = { thetaA: thetaV[a.k], thetaB: thetaV[b.k], pcA, pcB, piV, peV, gI, gE, xA: a.x, xB: b.x, dach };
+    verd = { pc, piV: V.pI, peV: V.pE, gI, gE, xA: a.x, xB: b.x, dach };
   }
 
   const okMc = mc <= G.mcMax, okEv = mev >= mc;
   return { n, sd, x, Sd, R, RT, theta, ps, pi, pe, huelle, g, ebenen, mc, mev, verd,
+           mus: schichten.map(s => s.mu),
            tauwasser: ebenen.length > 0, okMc, okEv, ok: !ebenen.length || (okMc && okEv) };
+}
+
+// μ-Wahl nach Tafel 4.29a: bei zwei Werten den, der M_c maximiert – vor dem Taupunkt den
+// kleineren, dahinter den größeren. Geprüft wird jede Trennstelle; dieselben μ gelten für
+// Tau- und Verdunstungsperiode. schichten[j].muMin/muMax optional (sonst fest s.mu).
+function glaserUnguenstig(schichten, richtung, dach) {
+  const n = schichten.length;
+  const lo = schichten.map(s => s.muMin !== undefined ? s.muMin : s.mu);
+  const hi = schichten.map(s => s.muMax !== undefined ? s.muMax : s.mu);
+  let best = null;
+  for (let t = n; t >= 0; t--) {
+    const mit = schichten.map((s, j) => ({ ...s, mu: j < t ? lo[j] : hi[j] }));
+    const g = glaser(mit, richtung, dach);
+    if (!best || g.mc > best.mc + 1e-12) best = { ...g, trennstelle: t };
+  }
+  best.bereich = schichten.map((s, j) => lo[j] !== hi[j]);
+  return best;
 }
 
 // ── Plausibilitätschecks ──────────────────────────────────────

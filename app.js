@@ -274,7 +274,11 @@ function leseSchichten() {
     const lambda = nr(r.querySelector('.s-lambda'));
     const quelle = r.querySelector('.s-quelle').value.trim();
     const mu = nr(r.querySelector('.s-mu'));
-    return { typ, name, d, lambda, quelle, mu };
+    const s = { typ, name, d, lambda, quelle, mu };
+    // μ-Bereich aus der Tafel nur, wenn der vorbelegte kleinere Wert nicht verändert wurde
+    const st = BAUSTOFFE.flatMap(g => g.stoffe).find(x => x.name === r.querySelector('.s-stoff').value);
+    if (st && st.muMax && mu === st.mu) { s.muMin = st.mu; s.muMax = st.muMax; }
+    return s;
   }).filter(s => s.d > 0 && (s.typ !== 'baustoff' || s.lambda > 0 || s.mu > 0));
 }
 
@@ -352,7 +356,7 @@ function berechnen() {
   const plaus = plausChecks(U, bauteilId, sR);
   const bt = BAUTEILE.find(b => b.id === bauteilId);
   const muFehlt = schichten.filter(s => !(s.mu > 0)).map(s => s.name || '?');
-  const feuchte = muFehlt.length ? { muFehlt } : { ...glaser(schichten, richtung, bt && bt.rminKey === 'dach'), schichten };
+  const feuchte = muFehlt.length ? { muFehlt } : { ...glaserUnguenstig(schichten, richtung, bt && bt.rminKey === 'dach'), schichten };
   const gmodg = pruefeGModG($('gmodg-fall').value, bauteilId, $('gmodg-zeile').value, raum, U);
 
   zeigeErgebnis({ sR, rsi, rse, RT, U0, dg, df, dUr, dU, U, Rvorh, temp, minErg, gmodg, schimmel, feuchte, plaus, ti, te, richtung, bauteilId, raum, din, inhomErg });
@@ -654,7 +658,8 @@ f<sub>Rsi</sub> = 1 − R<sub>si</sub> / R'<sub>T</sub> = 1 − ${fmtR(m.rsi)} /
         <small>f<sub>Rsi</sub> = ${fmtR(m.fRsi)} ${m.ok ? '≥' : '<'} 0,70</small></div>
     </div>
     <p class="hinweis klein" style="margin-top:8px">Gilt für die ungestörte Fläche. Maßgebend sind meist Wärmebrücken (Ecken, Anschlüsse) – dort f<sub>Rsi</sub> gesondert nachweisen.</p>
-    <p class="pruefen">Randbedingungen aus dem Gedächtnis – gegen DIN 4108-2, Abschnitt 6.2 prüfen!</p>
+    <p class="hinweis klein">R<sub>si</sub> = 0,25 und R<sub>se</sub> = 0,04 m²K/W für beheizte Räume: Schneider 26, Tafel 4.4a.</p>
+    <p class="pruefen">f<sub>Rsi</sub> ≥ 0,70 bzw. θ<sub>si</sub> ≥ 12,6 °C aus dem Gedächtnis – gegen DIN 4108-2, Abschnitt 6.2 prüfen!</p>
   </div>`;
 }
 
@@ -684,7 +689,7 @@ function htmlGlaser(e) {
   F.schichten.forEach((s, i) => {
     const tw = F.ebenen.some(eb => eb.k === i+1);
     zeilen += `<tr${tw ? ' class="markiert"' : ''}><td class="zahl">${i+1}</td><td>${name(i)}${tw ? ' <span class="badge nok">Tauwasser dahinter</span>' : ''}</td>
-      <td class="zahl mono">${fmtR(s.d/100)}</td><td class="zahl mono">${s.mu.toLocaleString('de-DE')}</td><td class="zahl mono">${fmtSd(F.sd[i])}</td>
+      <td class="zahl mono">${fmtR(s.d/100)}</td><td class="zahl mono">${F.mus[i].toLocaleString('de-DE')}${F.bereich[i] ? (F.mus[i] === s.muMax ? ' <span class="klein">(max)</span>' : ' <span class="klein">(min)</span>') : ''}</td><td class="zahl mono">${fmtSd(F.sd[i])}</td>
       <td class="zahl mono">${fmtSd(F.x[i+1])}</td><td class="zahl mono">${fmtT(F.theta[i+1])}</td><td class="zahl mono">${fmtP(F.ps[i+1])}</td></tr>`;
   });
 
@@ -706,10 +711,10 @@ g = δ<sub>0</sub> · (p<sub>i</sub> − p<sub>e</sub>) / S<sub>d</sub> = ${fmtG
   m<sub>c</sub> = t<sub>c</sub> · (g<sub>${j+1}</sub> − g<sub>${j+2}</sub>) = ${T.stunden} h · (${fmtG(F.g[j])} − ${fmtG(F.g[j+1])}) g/(m²h) = <span class="erg">${fmtM(eb.mc)} kg/m²</span>\n`;
     });
     const v = F.verd;
-    rw += `\n<strong>Verdunstungsperiode</strong> (${V.stunden} h, innen ${fmtT(V.ti)} °C / ${Math.round(V.phiI*100)} %, außen ${fmtT(V.te)} °C / ${Math.round(V.phiE*100)} %${v.dach ? ', Dach: Außenoberfläche ' + fmtT(V.teDach) + ' °C' : ''})
-p<sub>i</sub> = ${fmtP(v.piV)} Pa, p<sub>e</sub> = ${fmtP(v.peV)} Pa, in der Tauwasserzone: θ = ${fmtT(v.thetaA)} °C → p<sub>c</sub> = ${fmtP(v.pcA)} Pa${v.xA !== v.xB ? ` bzw. θ = ${fmtT(v.thetaB)} °C → ${fmtP(v.pcB)} Pa` : ''}
-g<sub>i</sub> = δ<sub>0</sub> · (p<sub>c</sub> − p<sub>i</sub>) / s<sub>d,i</sub> = 2,0·10⁻¹⁰ · (${fmtP(v.pcA)} − ${fmtP(v.piV)}) / ${fmtSd(v.xA)} = ${fmtG(v.gI)} g/(m²h)
-g<sub>e</sub> = δ<sub>0</sub> · (p<sub>c</sub> − p<sub>e</sub>) / s<sub>d,e</sub> = 2,0·10⁻¹⁰ · (${fmtP(v.pcB)} − ${fmtP(v.peV)}) / ${fmtSd(F.Sd - v.xB)} = ${fmtG(v.gE)} g/(m²h)
+    rw += `\n<strong>Verdunstungsperiode</strong> (Juni–August, ${V.stunden} h; Dampfdrücke nach Tafel 4.29b)
+p<sub>i</sub> = p<sub>e</sub> = ${fmtP(v.piV)} Pa, im Tauwasserbereich p<sub>s</sub> = ${fmtP(v.pc)} Pa (${v.dach ? 'Dach' : 'Außenwand/Decke'})
+g<sub>i</sub> = δ<sub>0</sub> · (p<sub>s</sub> − p<sub>i</sub>) / s<sub>d,i</sub> = 2,0·10⁻¹⁰ · (${fmtP(v.pc)} − ${fmtP(v.piV)}) / ${fmtSd(v.xA)} = ${fmtG(v.gI)} g/(m²h)
+g<sub>e</sub> = δ<sub>0</sub> · (p<sub>s</sub> − p<sub>e</sub>) / s<sub>d,e</sub> = 2,0·10⁻¹⁰ · (${fmtP(v.pc)} − ${fmtP(v.peV)}) / ${fmtSd(F.Sd - v.xB)} = ${fmtG(v.gE)} g/(m²h)
 m<sub>ev</sub> = t<sub>ev</sub> · (g<sub>i</sub> + g<sub>e</sub>) = <span class="erg">${fmtM(F.mev)} kg/m²</span>`;
   }
 
@@ -735,8 +740,9 @@ m<sub>ev</sub> = t<sub>ev</sub> · (g<sub>i</sub> + g<sub>e</sub>) = <span class
     <div class="ampel ${cls}" style="margin-top:12px"><div class="licht">${sym}</div><div>${urteil}<br><small>${detail}</small></div></div>
     ${F.tauwasser ? `<p class="hinweis klein" style="margin-top:8px">Grenzwert 0,5 kg/m², wenn die Tauwasserebene an einer nicht kapillar wasseraufnahmefähigen Schicht liegt (z.B. Folie, Mineralwolle). Bei Holz zusätzlich Massezunahme ≤ 5 % (Holzwerkstoffe ≤ 3 %) prüfen.</p>` : ''}
     ${e.inhomErg ? '<p class="hinweis klein">Inhomogene Schicht: Nachweis im Gefachbereich (Baustoff aus der Schichttabelle).</p>' : ''}
-    <p class="hinweis klein">μ-Werte mit Bereich (z.B. 15/35): eingetragen ist der kleinere Wert. Laut Schneider 26, Tafel 4.33 ist jeweils der für die Konstruktion <strong>ungünstigere</strong> Wert zu wählen – innen vor der Tauwasserebene meist der kleinere, außen dahinter meist der größere. Den Wert in der Spalte μ bei Bedarf ändern.</p>
-    <p class="pruefen">Randbedingungen nach DIN 4108-3:2018-10 aus dem Gedächtnis – prüfen! Ab 01.01.2027 verweist § 11 GModG auf DIN 4108-3:2024-03 (Änderungen nicht geprüft).</p>
+    <p class="hinweis klein"><strong>μ-Wahl nach Tafel 4.29a:</strong> Bei Stoffen mit zwei μ-Werten (z.B. 15/35) wählt die App automatisch den Wert, der die Tauwassermenge M<sub>c</sub> maximiert – vor dem Taupunkt (min), dahinter (max). Dieselben Werte gelten für die Verdunstungsperiode. Wer in der Spalte μ einen eigenen Wert einträgt, behält diesen.</p>
+    <p class="hinweis klein">Randbedingungen: Schneider 26, Tafel 4.29b und 4.4a; Grenzwerte Abschnitt 3.5.1. Ab 01.01.2027 verweist § 11 GModG auf DIN 4108-3:2024-03 (Änderungen nicht geprüft).</p>
+    <p class="pruefen">δ<sub>0</sub> = 2,0·10⁻¹⁰ kg/(m·s·Pa) aus dem Gedächtnis – gegen Schneider 26, Tafel 4.30 prüfen!</p>
   </div>`;
 }
 
