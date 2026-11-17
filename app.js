@@ -48,7 +48,11 @@ document.addEventListener('DOMContentLoaded', () => {
   addSchicht(); addSchicht(); addSchicht();
 
   // Service Worker
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+  if ('serviceWorker' in navigator) {
+    const hatteSW = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.addEventListener('controllerchange', () => { if (hatteSW) location.reload(); });
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
 });
 
 // ── Schichtenverwaltung ───────────────────────────────────────

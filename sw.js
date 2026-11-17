@@ -1,12 +1,13 @@
-const CACHE = 'ws-v2';
+const CACHE = 'ws-v3';
 const ASSETS = ['./', 'index.html', 'app.css', 'data.js', 'calc.js', 'app.js', 'icon.svg', 'manifest.json'];
 
-self.addEventListener('install', e => e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting())));
+self.addEventListener('install', e => e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS.map(a => new Request(a, { cache: 'reload' })))).then(() => self.skipWaiting())));
 self.addEventListener('activate', e => e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())));
+// Netz zuerst, damit Updates sofort ankommen; Cache nur offline
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
-  e.respondWith(caches.match(e.request).then(r => r || fetch(e.request).then(res => {
+  e.respondWith(fetch(e.request, { cache: 'no-cache' }).then(res => {
     const c = res.clone(); caches.open(CACHE).then(cache => cache.put(e.request, c));
     return res;
-  })));
+  }).catch(() => caches.match(e.request)));
 });
