@@ -263,7 +263,11 @@ const BAUSTOFFE = [
     { name: 'Sand, Kies, Splitt trocken (1800)', lambda: 0.70, mu: 3, gruendach: true, q: 'Z' },
     { name: 'Erdreich naturfeucht: Sand und Kies', lambda: 2.0, mu: 50, gruendach: true, q: 'Z' },
     { name: 'Erdreich naturfeucht: Ton, Schlick', lambda: 1.5, mu: 50, gruendach: true, q: 'Z' },
-    { name: 'Wurzelschutzbahn', lambda: 0.17, d: 0.4, herst: true, gruendach: true, q: 'G' },
+    // Wurzelschutzbahnen: Werkstoffkennwerte aus Tafel 4.33 Nr. 6.2–6.5 (übliche Dicke d als Vorschlag)
+    { name: 'Wurzelschutzbahn PE (hohe Rohdichte)', lambda: 0.50, mu: 100000, d: 0.1, gruendach: true, q: 'Z' },
+    { name: 'Wurzelschutzbahn PVC-P (weich)', lambda: 0.14, mu: 100000, d: 0.15, gruendach: true, q: 'Z' },
+    { name: 'Wurzelschutzbahn EPDM', lambda: 0.25, mu: 6000, d: 0.12, gruendach: true, q: 'Z' },
+    { name: 'Wurzelschutzbahn Bitumen (mit Einlage)', lambda: 0.17, mu: 20000, d: 0.4, gruendach: true, q: 'Z' },
   ]},
 ];
 // Folien mit s_d-Angabe: μ so, dass bei der Tabellendicke genau s_d herauskommt

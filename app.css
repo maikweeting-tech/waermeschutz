@@ -204,7 +204,7 @@ svg.grafik { width: 100%; height: auto; display: block; margin-bottom: 12px; fon
 /* Eingebettet in der Heizlast-App: eigene Kopfzeile und Teilen-Link ausblenden */
 .eingebettet .topbar, .eingebettet #btn-link, .eingebettet .aufgabe ~ .hinweis { display: none !important; }
 .eingebettet main { padding-top: 4px; }
-.eingebettet .fehlt { border-color: var(--rot) !important; background: var(--rot-hell) !important; }
+.eingebettet .fehlt, .tab .fehlt { border-color: var(--rot) !important; background: var(--rot-hell) !important; }
 
 /* i-Erklärungen */
 .info { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; margin: 0 2px; border-radius: 50%;

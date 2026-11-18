@@ -197,6 +197,9 @@ pruefe('Baustoffnamen eindeutig', new Set(namen).size, namen.length);
 pruefe('Alle λ > 0 (oder Folie mit s_d)', BAUSTOFFE.every(g => g.stoffe.every(s => s.lambda > 0 || (s.lambda === null && (s.sd > 0 || s.mu > 0)))), true);
 pruefe('Alle μ > 0, μ ≤ μ_max (außer Herstellerangabe)', BAUSTOFFE.every(g => g.stoffe.every(s => s.herst ? s.mu === undefined : s.mu > 0 && (!s.muMax || s.mu <= s.muMax))), true);
 pruefe('Taf. 4.33 Nr. 6.5: Bitumenbahn mit Einlage λ 0,17, μ 20 000', [st('Bitumenbahn mit Einlage (DIN EN 13707)').lambda, st('Bitumenbahn mit Einlage (DIN EN 13707)').mu].join(), '0.17,20000');
+pruefe('Taf. 4.33: Wurzelschutz PE 0,50/100 000, PVC-P 0,14/100 000, EPDM 0,25/6000',
+  ['Wurzelschutzbahn PE (hohe Rohdichte)', 'Wurzelschutzbahn PVC-P (weich)', 'Wurzelschutzbahn EPDM'].map(n => st(n).lambda + '/' + st(n).mu).join(' '),
+  '0.5/100000 0.14/100000 0.25/6000');
 pruefe('Taf. 4.33 Nr. 7.7: Erdreich Sand/Kies λ 2,0, μ 50', [st('Erdreich naturfeucht: Sand und Kies').lambda, st('Erdreich naturfeucht: Sand und Kies').mu].join(), '2,50');
 // Stichproben gegen Schneider 26, Tafel 4.33
 pruefe('Taf. 4.33: Kalksandstein 1800 λ 0,99, μ 15/25', [st('Kalksandstein (1800)').lambda, st('Kalksandstein (1800)').mu, st('Kalksandstein (1800)').muMax].join(), '0.99,15,25');

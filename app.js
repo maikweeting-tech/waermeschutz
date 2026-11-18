@@ -382,6 +382,24 @@ function onTyp(sel) {
 }
 
 // ── Eingaben lesen ────────────────────────────────────────────
+// Zeilen, in denen schon etwas steht, denen aber d (bzw. λ/μ) fehlt – werden markiert statt übergangen
+function schichtLuecken() {
+  const meldungen = [];
+  [...$('schichten').rows].forEach((r, i) => {
+    const feld = k => r.querySelector(k);
+    const begonnen = feld('.s-stoff').value || feld('.s-name').value.trim() || feld('.s-d').value || feld('.s-lambda').value || feld('.s-mu').value;
+    if (!begonnen) return;
+    const fehlt = [];
+    if (!(nr(feld('.s-d')) > 0)) { fehlt.push('Dicke d'); feld('.s-d').classList.add('fehlt'); }
+    if (feld('.typ-sel').value === 'baustoff' && !(nr(feld('.s-lambda')) > 0) && !(nr(feld('.s-mu')) > 0)) {
+      fehlt.push('λ'); feld('.s-lambda').classList.add('fehlt');
+    }
+    if (fehlt.length) meldungen.push(`Schicht ${i + 1}: ${fehlt.join(' und ')} fehlt`);
+  });
+  return meldungen;
+}
+['input', 'change'].forEach(ev => document.addEventListener(ev, e => e.target.classList && e.target.classList.remove('fehlt')));
+
 function leseSchichten() {
   return [...$('schichten').rows].map(r => {
     const typ = r.querySelector('.typ-sel').value;
@@ -438,6 +456,8 @@ function berechnen() {
   const luSt = parseInt($('lu-stufe').value);
   const luNr = parseInt($('lu-schicht').value) || 0;
 
+  const luecken = schichtLuecken();
+  if (luecken.length) { toast(luecken.join(' · ') + '.'); $('ergebnis').hidden = true; _erg = null; return; }
   const schichten = leseSchichten();
   if (!schichten.length) { toast('Mindestens eine Schicht mit d und λ eingeben.'); return; }
   if (isNaN(ti) || isNaN(te)) { toast('θ_i und θ_e eingeben.'); return; }
