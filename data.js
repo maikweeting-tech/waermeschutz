@@ -146,6 +146,24 @@ const BEISPIELE = [
   { titel: 'Innendämmung ohne Dampfbremse (Tauwasser!)', f: { bauteil: 'aussenwand' }, s: [
     ['baustoff', 'Gipskartonplatte (900)', '', 1.25], ['baustoff', 'Mineralwolle (MW) 035', '', 6],
     ['baustoff', 'Vollziegel (1800)', '', 24], ['baustoff', 'Kalk-/Kalkzementputz (1800)', '', 2] ]},
+  // Fußbodenaufbauten über unbeheiztem Keller (oben = innen)
+  { titel: 'Fußboden: Fliesen auf Heizestrich', f: { bauteil: 'kellerdecke' }, s: [
+    ['baustoff', 'Fliesen, Keramik/Feinsteinzeug (2300)', '', 1], ['baustoff', 'Dünnbettmörtel / Fliesenkleber (1600)', '', 0.5],
+    ['baustoff', 'Heizestrich (Zementestrich 2000)', '', 6.5], ['baustoff', 'PE-Folie 0,15 mm (s_d = 50 m)', '', 0.015],
+    ['baustoff', 'Trittschalldämmung EPS-T 045', '', 3], ['baustoff', 'EPS (Styropor) 035', '', 10],
+    ['baustoff', 'Stahlbeton (2300, 1 % Stahl)', '', 18] ]},
+  { titel: 'Fußboden: Parkett auf Zementestrich', f: { bauteil: 'kellerdecke' }, s: [
+    ['baustoff', 'Parkett Eiche (Laubholz 700)', '', 1.5], ['baustoff', 'Zementestrich (2000)', '', 5],
+    ['baustoff', 'PE-Folie 0,15 mm (s_d = 50 m)', '', 0.015], ['baustoff', 'Mineralwolle (MW) 040', '', 3],
+    ['baustoff', 'EPS (Styropor) 035', '', 10], ['baustoff', 'Stahlbeton (2300, 1 % Stahl)', '', 18] ]},
+  { titel: 'Fußboden: Linoleum auf Calciumsulfat-Fließestrich', f: { bauteil: 'kellerdecke' }, s: [
+    ['baustoff', 'Linoleum (1200)', '', 0.25], ['baustoff', 'Calciumsulfat-Fließestrich (2100)', '', 5],
+    ['baustoff', 'PE-Folie 0,15 mm (s_d = 50 m)', '', 0.015], ['baustoff', 'Trittschalldämmung EPS-T 045', '', 3],
+    ['baustoff', 'EPS (Styropor) 035', '', 10], ['baustoff', 'Stahlbeton (2300, 1 % Stahl)', '', 18] ]},
+  { titel: 'Fußboden: PVC-Belag auf Zementestrich', f: { bauteil: 'kellerdecke' }, s: [
+    ['baustoff', 'Kunststoffbelag, z.B. PVC (1700)', '', 0.2], ['baustoff', 'Zementestrich (2000)', '', 5],
+    ['baustoff', 'PE-Folie 0,15 mm (s_d = 50 m)', '', 0.015], ['baustoff', 'Trittschalldämmung EPS-T 045', '', 3],
+    ['baustoff', 'EPS (Styropor) 035', '', 10], ['baustoff', 'Stahlbeton (2300, 1 % Stahl)', '', 18] ]},
   { titel: 'Kellerdecke, unterseitig gedämmt', f: { bauteil: 'kellerdecke' }, s: [
     ['baustoff', 'Zementestrich (2000)', '', 5], ['baustoff', 'EPS (Styropor) 040', '', 3],
     ['baustoff', 'Stahlbeton (2300, 1 % Stahl)', '', 18], ['baustoff', 'Mineralwolle (MW) 035', '', 10] ]},
@@ -188,7 +206,8 @@ const BAUSTOFFE = [
     { name: 'Expandierter Kork (ICB) 040', lambdaD: 0.040, lambda: 0.042, mu: 5, muMax: 10, q: 'Z', tafel: '4.43' },
     { name: 'Holzwolle-Leichtbauplatte (WW) 090', lambdaD: 0.090, lambda: 0.095, mu: 2, muMax: 5, q: 'Z', tafel: '4.43' },
     { name: 'Blähperlit (EPB) 050', lambdaD: 0.050, lambda: 0.052, mu: 5, q: 'Z', tafel: '4.43' },
-    { name: 'Schaumglas (CG) 050', lambdaD: 0.050, lambda: 0.052, mu: 1000000, dicht: true, q: 'Z', tafel: '4.43' },
+    { name: 'Schaumglas (CG) 050', lambdaD: 0.050, lambda: 0.052, mu: 1000000, dicht: true, sdHinweis: true, q: 'Z', tafel: '4.43' },
+    { name: 'Trittschalldämmung EPS-T 045', lambdaD: 0.045, lambda: 0.046, mu: 20, muMax: 100, q: 'Z', tafel: '4.43' },
     { name: 'Zellulose-Einblasdämmung 040', lambda: 0.040, mu: 2, q: 'G' },
   ]},
   { gruppe: 'Mauerwerk', stoffe: [
@@ -256,6 +275,24 @@ const BAUSTOFFE = [
   ]},
   // Gründach: lose Schüttungen (Tafel 4.33 Nr. 7.1, μ 3) und Erdreich naturfeucht (Nr. 7.7, μ 50).
   // Schneider 26, Abschn. 3.5.2: Glaser-Verfahren bei begrünten Dächern nicht anwendbar.
+  // Fußboden: Beläge Tafel 4.33 Nr. 6.1, Fliesen Nr. 7.2, Estriche Nr. 1.3, Holz Nr. 5,
+  // Dünnbettmörtel Nr. 1.2 (als Fliesenkleber); übliche Dicke d als Vorschlag
+  { gruppe: 'Fußboden: Beläge und Estriche', stoffe: [
+    { name: 'Fliesen, Keramik/Feinsteinzeug (2300)', lambda: 1.3, mu: 1000000, dicht: true, d: 1.0, q: 'Z' },
+    { name: 'Dünnbettmörtel / Fliesenkleber (1600)', lambda: 1.0, mu: 15, muMax: 35, d: 0.5, q: 'Z' },
+    { name: 'Parkett Eiche (Laubholz 700)', lambda: 0.18, mu: 50, muMax: 200, d: 1.5, rho: 700, holz: 0.05, q: 'Z' },
+    { name: 'Dielen Nadelholz (500)', lambda: 0.13, mu: 20, muMax: 50, d: 2.4, rho: 500, holz: 0.05, q: 'Z' },
+    { name: 'Linoleum (1200)', lambda: 0.17, mu: 800, muMax: 1000, d: 0.25, q: 'Z' },
+    { name: 'Kunststoffbelag, z.B. PVC (1700)', lambda: 0.25, mu: 10000, d: 0.2, q: 'Z' },
+    { name: 'Gummibelag (1200)', lambda: 0.17, mu: 10000, d: 0.3, q: 'Z' },
+    { name: 'Teppich/Teppichboden (200)', lambda: 0.06, mu: 5, d: 0.8, q: 'Z' },
+    { name: 'Korkfliesen (> 400)', lambda: 0.065, mu: 20, muMax: 40, d: 0.4, q: 'Z' },
+    { name: 'Korkunterlage (< 200)', lambda: 0.05, mu: 10, muMax: 20, d: 0.3, q: 'Z' },
+    { name: 'Heizestrich (Zementestrich 2000)', lambda: 1.40, mu: 15, muMax: 35, d: 6.5, q: 'Z' },
+    { name: 'Calciumsulfat-Fließestrich als Heizestrich (2100)', lambda: 1.4, mu: 15, muMax: 35, d: 5, q: 'Z' },
+    { name: 'Magnesiaestrich (1400)', lambda: 0.47, mu: 15, muMax: 35, d: 4, q: 'Z' },
+    { name: 'Gussasphaltestrich (2300)', lambda: 0.90, mu: 1000000, dicht: true, sdHinweis: true, d: 3, q: 'Z' },
+  ]},
   { gruppe: 'Gründach / Schüttungen', stoffe: [
     { name: 'Blähton/Blähschiefer-Schüttung (≤ 400)', lambda: 0.16, mu: 3, gruendach: true, q: 'Z' },
     { name: 'Bimskies-Schüttung (≤ 1000)', lambda: 0.19, mu: 3, gruendach: true, q: 'Z' },

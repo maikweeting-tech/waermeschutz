@@ -211,7 +211,7 @@ function onStoff(sel) {
 }
 
 function muText(s) {
-  if (s.dicht) return '∞ (praktisch dampfdicht, s_d ≥ 1500 m)';
+  if (s.dicht) return s.sdHinweis ? '∞ (praktisch dampfdicht, s_d ≥ 1500 m)' : '∞ (praktisch dampfdicht)';
   if (s.mu === undefined) return 'Herstellerangabe';
   return s.muMax ? `${s.mu.toLocaleString('de-DE')}/${s.muMax.toLocaleString('de-DE')}` : s.mu.toLocaleString('de-DE');
 }
@@ -531,7 +531,7 @@ function zeigeErgebnis(e) {
 const GRUPPE_FARBE = {
   'Dämmstoffe': '#f2c94c', 'Mauerwerk': '#c0573e', 'Beton': '#9aa0a6', 'Holz / Holzwerkstoffe': '#b07d48',
   'Putze / Mörtel / Estriche': '#e3d7c1', 'Platten / Bekleidungen': '#d0d0d0', 'Folien / Bahnen': '#6f6fb8',
-  'Abdichtungen / Dachbahnen': '#3d3d3d', 'Gründach / Schüttungen': '#6aa84f'
+  'Abdichtungen / Dachbahnen': '#3d3d3d', 'Gründach / Schüttungen': '#6aa84f', 'Fußboden: Beläge und Estriche': '#c9a66b'
 };
 function schichtFarbe(s) {
   if (s.typ === 'luft_ruhend') return '#bfe3f5';
