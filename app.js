@@ -187,7 +187,7 @@ function stoffOptionen() {
       const teile = [esc(s.name)];
       if (s.lambda) teile.push((s.lambdaD ? 'λ_B ' : 'λ ') + (s.lambda < 0.1 ? s.lambda.toFixed(3) : s.lambda.toFixed(2)).replace('.', ','));
       if (!s.sd) teile.push('μ ' + muText(s));
-      h += `<option value="${esc(s.name)}" data-lambda="${s.lambda || ''}" data-mu="${s.mu}" data-d="${s.d || ''}">${teile.join(' · ')}${s.q === 'G' ? ' (ungeprüft)' : ''}</option>`;
+      h += `<option value="${esc(s.name)}" data-lambda="${s.lambda || ''}" data-mu="${s.mu ?? ''}" data-d="${s.d || ''}">${teile.join(' · ')}${s.q === 'G' ? ' (ungeprüft)' : ''}</option>`;
     });
     h += '</optgroup>';
   });
@@ -205,16 +205,19 @@ function onStoff(sel) {
   tr.querySelector('.s-lambda').value = o.lambda;
   tr.querySelector('.s-lambda').placeholder = o.lambda ? 'W/(mK)' : '– (R ≈ 0)';
   tr.querySelector('.s-mu').value = o.mu;
+  tr.querySelector('.s-mu').placeholder = o.mu ? '–' : 'Herst.';
   if (o.d) tr.querySelector('.s-d').value = o.d;
   tr.querySelector('.s-quelle').value = quelleText(st);
 }
 
 function muText(s) {
   if (s.dicht) return '∞ (praktisch dampfdicht, s_d ≥ 1500 m)';
+  if (s.mu === undefined) return 'Herstellerangabe';
   return s.muMax ? `${s.mu.toLocaleString('de-DE')}/${s.muMax.toLocaleString('de-DE')}` : s.mu.toLocaleString('de-DE');
 }
 function quelleText(s) {
   if (!s) return '';
+  if (s.herst) return 'μ/s_d nach Herstellerangabe eintragen';
   if (s.q !== 'Z') return 'ungeprüft';
   const zusatz = [];
   if (s.lambdaD) zusatz.push(`λ_D ${s.lambdaD.toFixed(3).replace('.', ',')} → λ_B`);
@@ -392,6 +395,7 @@ function leseSchichten() {
     const st = BAUSTOFFE.flatMap(g => g.stoffe).find(x => x.name === r.querySelector('.s-stoff').value);
     if (st && st.muMax && mu === st.mu) { s.muMin = st.mu; s.muMax = st.muMax; }
     if (st && st.holz) { s.holz = st.holz; s.rho = st.rho; }
+    if (st && st.gruendach) s.gruendach = true;
     return s;
   }).filter(s => s.d > 0 && (s.typ !== 'baustoff' || s.lambda > 0 || s.mu > 0));
 }
@@ -506,7 +510,8 @@ function zeigeErgebnis(e) {
 // ── Grafik Temperaturverlauf (SVG) ────────────────────────────
 const GRUPPE_FARBE = {
   'Dämmstoffe': '#f2c94c', 'Mauerwerk': '#c0573e', 'Beton': '#9aa0a6', 'Holz / Holzwerkstoffe': '#b07d48',
-  'Putze / Mörtel / Estriche': '#e3d7c1', 'Platten / Bekleidungen': '#d0d0d0', 'Folien / Bahnen': '#6f6fb8'
+  'Putze / Mörtel / Estriche': '#e3d7c1', 'Platten / Bekleidungen': '#d0d0d0', 'Folien / Bahnen': '#6f6fb8',
+  'Abdichtungen / Dachbahnen': '#3d3d3d', 'Gründach / Schüttungen': '#6aa84f'
 };
 function schichtFarbe(s) {
   if (s.typ === 'luft_ruhend') return '#bfe3f5';
@@ -893,6 +898,7 @@ M<sub>ev</sub> = δ<sub>0</sub> · ((p<sub>c</sub> − p<sub>i</sub>) / s<sub>d,
     <div class="ampel ${cls}" style="margin-top:12px"><div class="licht">${sym}</div><div>${urteil}<br><small>${detail}</small></div></div>
     ${F.tauwasser ? `<p class="hinweis klein" style="margin-top:8px">Grenzwert 0,5 kg/m², wenn die Tauwasserebene an einer kapillar nicht wasseraufnahmefähigen Schicht liegt (z.B. Folie, Mineralwolle) – bitte selbst prüfen. Holz (5 %) und Holzwerkstoffe (3 %) aus der Auswahlliste rechnet die App automatisch ein, eigene Holzbaustoffe nicht.</p>` : ''}
     ${e.inhomErg ? '<p class="hinweis klein">Inhomogene Schicht: Nachweis im Gefachbereich (Baustoff aus der Schichttabelle).</p>' : ''}
+    ${F.schichten.some(s => s.gruendach) ? '<div class="hinweis-box"><strong>Begrüntes Dach:</strong> Nach Schneider 26, Abschn. 3.5.2 ist das Glaser-Verfahren bei begrünten Dachkonstruktionen <strong>nicht anwendbar</strong> – Nachweis mit rechnerbasierter Simulation (DIN 4108-3, Anhang D). Die Rechnung oben dient nur zur Orientierung.</div>' : ''}
     <p class="hinweis klein"><strong>μ-Wahl nach Tafel 4.29a:</strong> Bei Stoffen mit zwei μ-Werten (z.B. 15/35) wählt die App automatisch den Wert, der die Tauwassermenge M<sub>c</sub> maximiert – vor dem Taupunkt (min), dahinter (max). Dieselben Werte gelten für die Verdunstungsperiode. Wer in der Spalte μ einen eigenen Wert einträgt, behält diesen.</p>
     <p class="hinweis klein">Randbedingungen: Schneider 26, Tafel 4.29b und 4.4a; Grenzwerte Abschnitt 3.5.1. Ab 01.01.2027 verweist § 11 GModG auf DIN 4108-3:2024-03 (Änderungen nicht geprüft).</p>
     <p class="hinweis klein">δ<sub>0</sub> = 2·10⁻¹⁰ kg/(m·s·Pa) und Formeln nach Schneider 26, Abschn. 3.2 und Tafel 4.30.</p>

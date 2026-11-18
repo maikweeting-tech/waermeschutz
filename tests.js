@@ -194,8 +194,10 @@ pruefe('Jedes Bauteil hat gültige Anlage-7-Zeilen und Referenz',
 // ── Daten ──
 const namen = BAUSTOFFE.flatMap(g => g.stoffe.map(s => s.name));
 pruefe('Baustoffnamen eindeutig', new Set(namen).size, namen.length);
-pruefe('Alle λ > 0 (oder Folie mit s_d)', BAUSTOFFE.every(g => g.stoffe.every(s => s.lambda > 0 || (s.lambda === null && s.sd > 0))), true);
-pruefe('Alle μ > 0, μ ≤ μ_max', BAUSTOFFE.every(g => g.stoffe.every(s => s.mu > 0 && (!s.muMax || s.mu <= s.muMax))), true);
+pruefe('Alle λ > 0 (oder Folie mit s_d)', BAUSTOFFE.every(g => g.stoffe.every(s => s.lambda > 0 || (s.lambda === null && (s.sd > 0 || s.mu > 0)))), true);
+pruefe('Alle μ > 0, μ ≤ μ_max (außer Herstellerangabe)', BAUSTOFFE.every(g => g.stoffe.every(s => s.herst ? s.mu === undefined : s.mu > 0 && (!s.muMax || s.mu <= s.muMax))), true);
+pruefe('Taf. 4.33 Nr. 6.5: Bitumenbahn mit Einlage λ 0,17, μ 20 000', [st('Bitumenbahn mit Einlage (DIN EN 13707)').lambda, st('Bitumenbahn mit Einlage (DIN EN 13707)').mu].join(), '0.17,20000');
+pruefe('Taf. 4.33 Nr. 7.7: Erdreich Sand/Kies λ 2,0, μ 50', [st('Erdreich naturfeucht: Sand und Kies').lambda, st('Erdreich naturfeucht: Sand und Kies').mu].join(), '2,50');
 // Stichproben gegen Schneider 26, Tafel 4.33
 pruefe('Taf. 4.33: Kalksandstein 1800 λ 0,99, μ 15/25', [st('Kalksandstein (1800)').lambda, st('Kalksandstein (1800)').mu, st('Kalksandstein (1800)').muMax].join(), '0.99,15,25');
 pruefe('Taf. 4.33: Stahlbeton 1 % Stahl λ 2,3, μ 80/130', [st('Stahlbeton (2300, 1 % Stahl)').lambda, st('Stahlbeton (2300, 1 % Stahl)').mu, st('Stahlbeton (2300, 1 % Stahl)').muMax].join(), '2.3,80,130');

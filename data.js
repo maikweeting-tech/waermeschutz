@@ -142,7 +142,7 @@ const BEISPIELE = [
     ['baustoff', 'Mineralwolle (MW) 035', '', 20], ['baustoff', 'Holzfaserdämmplatte (WF) 045', '', 6, 5] ]},
   { titel: 'Flachdach Warmdach (PUR/PIR)', f: { bauteil: 'flachdach' }, s: [
     ['baustoff', 'Stahlbeton (2300, 1 % Stahl)', '', 20], ['baustoff', 'Aluminiumfolie 0,05 mm (s_d = 1500 m)', '', 0.005],
-    ['baustoff', 'PUR/PIR 024', '', 16], ['baustoff', 'Bitumendachbahn DIN EN 13707', '', 0.8] ]},
+    ['baustoff', 'PUR/PIR 024', '', 16], ['baustoff', 'Bitumenbahn mit Einlage (DIN EN 13707)', '', 0.8] ]},
   { titel: 'Innendämmung ohne Dampfbremse (Tauwasser!)', f: { bauteil: 'aussenwand' }, s: [
     ['baustoff', 'Gipskartonplatte (900)', '', 1.25], ['baustoff', 'Mineralwolle (MW) 035', '', 6],
     ['baustoff', 'Vollziegel (1800)', '', 24], ['baustoff', 'Kalk-/Kalkzementputz (1800)', '', 2] ]},
@@ -244,7 +244,26 @@ const BAUSTOFFE = [
     { name: 'Aluminiumfolie 0,05 mm (s_d = 1500 m)', lambda: null, sd: 1500, d: 0.005, q: 'Z' },
     { name: 'Aluminiumverbundfolie 0,4 mm (s_d = 10 m)', lambda: null, sd: 10, d: 0.04, q: 'Z' },
     { name: 'Bituminiertes Papier 0,1 mm (s_d = 2 m)', lambda: null, sd: 2, d: 0.01, q: 'Z' },
-    { name: 'Bitumendachbahn DIN EN 13707', lambda: 0.17, mu: 20000, d: 0.4, q: 'Z' },
+  ]},
+  // Abdichtungen: Tafel 4.33 Nr. 6.2/6.5 (Z); Vlies und Dampfdruckausgleichsschicht stehen
+  // nicht in der Tafel → ungeprüft bzw. Herstellerangabe (herst: μ muss eingetragen werden)
+  { gruppe: 'Abdichtungen / Dachbahnen', stoffe: [
+    { name: 'Bitumenbahn mit Einlage (DIN EN 13707)', lambda: 0.17, mu: 20000, d: 0.4, q: 'Z' },
+    { name: 'Nackte Bitumenbahn (DIN 52129)', lambda: 0.17, mu: 2000, muMax: 20000, d: 0.2, q: 'Z' },
+    { name: 'Bitumen (als Stoff, z.B. Anstrich)', lambda: 0.17, mu: 50000, q: 'Z' },
+    { name: 'Dampfdruckausgleichsschicht (Lochglasvlies-Bitumenbahn)', lambda: 0.17, d: 0.3, herst: true, q: 'G' },
+    { name: 'Schutz-/Trennvlies (diffusionsoffen)', lambda: null, mu: 1, d: 0.3, q: 'G' },
+  ]},
+  // Gründach: lose Schüttungen (Tafel 4.33 Nr. 7.1, μ 3) und Erdreich naturfeucht (Nr. 7.7, μ 50).
+  // Schneider 26, Abschn. 3.5.2: Glaser-Verfahren bei begrünten Dächern nicht anwendbar.
+  { gruppe: 'Gründach / Schüttungen', stoffe: [
+    { name: 'Blähton/Blähschiefer-Schüttung (≤ 400)', lambda: 0.16, mu: 3, gruendach: true, q: 'Z' },
+    { name: 'Bimskies-Schüttung (≤ 1000)', lambda: 0.19, mu: 3, gruendach: true, q: 'Z' },
+    { name: 'Schaumlava-Schüttung (≤ 1200)', lambda: 0.22, mu: 3, gruendach: true, q: 'Z' },
+    { name: 'Sand, Kies, Splitt trocken (1800)', lambda: 0.70, mu: 3, gruendach: true, q: 'Z' },
+    { name: 'Erdreich naturfeucht: Sand und Kies', lambda: 2.0, mu: 50, gruendach: true, q: 'Z' },
+    { name: 'Erdreich naturfeucht: Ton, Schlick', lambda: 1.5, mu: 50, gruendach: true, q: 'Z' },
+    { name: 'Wurzelschutzbahn', lambda: 0.17, d: 0.4, herst: true, gruendach: true, q: 'G' },
   ]},
 ];
 // Folien mit s_d-Angabe: μ so, dass bei der Tabellendicke genau s_d herauskommt
