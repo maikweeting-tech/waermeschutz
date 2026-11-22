@@ -17,7 +17,8 @@ const AUSSENSEITE = {
   erdreich: { label: 'Erdreich' },
   innen:    { label: 'Innenraum / unbeheizter Raum (Keller) / belüftete Luftschicht' }
 };
-const AUSSENSEITE_QUELLE = { text: 'DIN EN ISO 6946; Schneider 26, Tafel 4.4a', geprueft: false };
+// vom Nutzer gegen Schneider 26, Tafel 4.4a geprüft (22.11.2026)
+const AUSSENSEITE_QUELLE = { text: 'DIN EN ISO 6946; Schneider 26, Tafel 4.4a', geprueft: '22.11.2026' };
 
 // Ruhende (unbelüftete) Luftschichten [mm → m²K/W]
 // DIN EN ISO 6946:2018-03, Tabelle 2 – G
