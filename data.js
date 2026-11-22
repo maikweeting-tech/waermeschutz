@@ -75,20 +75,23 @@ const GMODG = {
 // Mindest-Wärmedurchlasswiderstände R_min [m²K/W] – R ohne R_si/R_se
 // DIN 4108-2, Tabelle 3 – G (2026-05-Werte: Platzhalter = 2013er, unbedingt prüfen!)
 const R_MIN = {
+  // 2013-02 geprüft am 22.11.2026 gegen Abschrift XLStatik.de „Mindestwärmeschutz nach
+  // DIN 4108-2:2013-02, Tab. 3“, Rev. 1 vom 01.04.2019 (CC0). Fußnote c (0,55 bei niedrig
+  // beheizten Räumen) steht dort nur bei Zeile 1 (Wände) – alle anderen Zeilen gelten unverändert.
   '2013-02': {
     normal: {
-      aussenwand:      { rmin:1.20, zeile:'1',   text:'Außenwände' },
-      dach:            { rmin:1.20, zeile:'3',   text:'Dach, Dachschräge, Abseitenwand' },
-      decke_aussen:    { rmin:1.75, zeile:'4',   text:'Decke/Fußboden gegen Außenluft' },
-      decke_unbeheizt: { rmin:0.90, zeile:'5',   text:'Decke unter nicht ausg. Dachraum' },
-      kellerdecke:     { rmin:0.90, zeile:'5/6', text:'Kellerdecke, gegen Erdreich' }
+      aussenwand:      { rmin:1.20, zeile:'1',       text:'Wände beheizter Räume gegen Außenluft/Erdreich/unbeheizt', geprueft:'22.11.2026' },
+      dach:            { rmin:1.20, zeile:'2 / 3.1', text:'Dachschrägen, Decken nach oben und Flachdächer gegen Außenluft', geprueft:'22.11.2026' },
+      decke_aussen:    { rmin:1.75, zeile:'4.1',     text:'Decken nach unten gegen Außenluft, Tiefgarage, Durchfahrt', geprueft:'22.11.2026' },
+      decke_unbeheizt: { rmin:0.90, zeile:'3.3',     text:'Decken nach oben zu nicht beheizten Räumen', geprueft:'22.11.2026' },
+      kellerdecke:     { rmin:0.90, zeile:'4.2 / 4.3', text:'Decke gegen unbeheizten Keller / Sohlplatte gegen Erdreich', geprueft:'22.11.2026' }
     },
     niedrig: {
-      aussenwand:      { rmin:0.55, zeile:'1',   text:'Außenwände' },
-      dach:            { rmin:0.90, zeile:'3',   text:'Dach, Dachschräge' },
-      decke_aussen:    { rmin:1.20, zeile:'4',   text:'Decke/Fußboden gegen Außenluft' },
-      decke_unbeheizt: { rmin:0.55, zeile:'5',   text:'Decke unter nicht ausg. Dachraum' },
-      kellerdecke:     { rmin:0.55, zeile:'5/6', text:'Kellerdecke, gegen Erdreich' }
+      aussenwand:      { rmin:0.55, zeile:'1 (Fn. c)', text:'Wände niedrig beheizter Räume', geprueft:'22.11.2026' },
+      dach:            { rmin:1.20, zeile:'2 / 3.1', text:'Dachschrägen, Decken nach oben und Flachdächer gegen Außenluft', geprueft:'22.11.2026' },
+      decke_aussen:    { rmin:1.75, zeile:'4.1',     text:'Decken nach unten gegen Außenluft, Tiefgarage, Durchfahrt', geprueft:'22.11.2026' },
+      decke_unbeheizt: { rmin:0.90, zeile:'3.3',     text:'Decken nach oben zu nicht beheizten Räumen', geprueft:'22.11.2026' },
+      kellerdecke:     { rmin:0.90, zeile:'4.2 / 4.3', text:'Decke gegen unbeheizten Keller / Sohlplatte gegen Erdreich', geprueft:'22.11.2026' }
     }
   },
   '2026-05': {
