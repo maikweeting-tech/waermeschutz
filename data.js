@@ -114,11 +114,12 @@ const ALPHA_BEF = 0.8;
 
 // Typische U-Wert-Bereiche [W/(m²K)] – zur Plausibilitätsprüfung
 const U_TYPISCH = {
-  aussenwand:      { min:0.15, max:0.80, text:'Außenwand' },
-  dach:            { min:0.10, max:0.50, text:'Dach' },
-  decke_aussen:    { min:0.15, max:0.60, text:'Decke gegen Außenluft' },
-  decke_unbeheizt: { min:0.15, max:0.60, text:'Decke unter Dachraum' },
-  kellerdecke:     { min:0.20, max:0.80, text:'Kellerdecke' }
+  // Untergrenzen auf Passivhaus-Niveau gesenkt (gut gedämmte Neubauten liegen sonst „außerhalb“)
+  aussenwand:      { min:0.10, max:0.80, text:'Außenwand' },
+  dach:            { min:0.08, max:0.50, text:'Dach' },
+  decke_aussen:    { min:0.10, max:0.60, text:'Decke gegen Außenluft' },
+  decke_unbeheizt: { min:0.10, max:0.60, text:'Decke unter Dachraum' },
+  kellerdecke:     { min:0.10, max:0.80, text:'Kellerdecke / Bodenplatte' }
 };
 
 // Richtungslabels

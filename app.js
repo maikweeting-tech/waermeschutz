@@ -1050,14 +1050,17 @@ function setzeGlaserMassstab(m) {
 // 6 – Zusammenfassung
 function htmlZusammenfassung(e) {
   const bt = BAUTEILE.find(b => b.id === e.bauteilId);
-  const minOk = e.minErg ? (e.minErg.ok ? 'erfüllt' : 'NICHT erfüllt') : 'nicht geprüft';
+  const m = e.minErg;
+  const minOk = m ? (m.ok ? 'erfüllt' : 'NICHT erfüllt') : 'nicht geprüft';
+  const rr = RSI_RSE[e.richtung] || {};
+  const ungeprueft = e.sR.filter(s => s.typ === 'luft_ruhend' || !s.quelle || s.quelle === 'ungeprüft').map(s => s.typ === 'luft_ruhend' ? 'Luftschicht (R aus Tabelle)' : (s.name || 'Schicht ohne Namen'));
   return `<div class="karte" style="border-left:4px solid var(--gruen)">
     <p class="erg-titel">Zusammenfassung</p>
     <p>Das Bauteil <strong>${esc(bt ? bt.label : '')}</strong> erreicht einen Wärmedurchgangskoeffizienten von
-       <strong>U = ${fmtU(e.U)} W/(m²K)</strong>.
-       Der winterliche Mindestwärmeschutz nach DIN 4108-2 ist <strong>${minOk}</strong>.
+       <strong>U = ${fmtU(e.U)} W/(m²K)</strong> (R<sub>T</sub> = ${fmtR(e.RT)} m²K/W).
+       Der winterliche Mindestwärmeschutz nach DIN 4108-2${m ? ':' + esc(m.din) : ''} ist <strong>${minOk}</strong>${m ? ` (R = ${fmtR(m.Rvorh)} ${m.ok ? '≥' : '<'} R<sub>min</sub> = ${fmtR(m.rmin)} m²K/W)` : ''}.
        ${!e.gmodg ? '' : e.gmodg.fall === 'neubau'
-         ? `Gegenüber dem Referenzgebäude des GModG (U<sub>Ref</sub> = ${fmtU(e.gmodg.umax)}) ist das Bauteil <strong>${e.gmodg.ok ? 'gleich gut oder besser' : 'schlechter'}</strong>.`
+         ? `Gegenüber dem Referenzgebäude des GModG (Anlage 1, U<sub>Ref</sub> = ${fmtU(e.gmodg.umax)} W/(m²K)) ist das Bauteil <strong>${e.gmodg.ok ? 'gleich gut oder besser' : 'schlechter'}</strong> – nur zur Orientierung, nachgewiesen wird beim Neubau H'<sub>T</sub> des ganzen Gebäudes.`
          : e.gmodg.keineAnforderung ? 'Das GModG stellt an diese Maßnahme in dieser Temperaturzone keine Anforderung.'
          : `Die Anforderung des GModG (§ 36, Anlage 7 Nr. ${e.gmodg.zeile.id}: U<sub>max</sub> = ${fmtU(e.gmodg.umax)}) ist <strong>${e.gmodg.ok ? 'erfüllt' : 'NICHT erfüllt'}</strong>.`}
        Der Schimmelnachweis in der Fläche ist <strong>${e.schimmel.ok ? 'erfüllt' : 'NICHT erfüllt'}</strong> (θ<sub>si</sub> = ${fmtT(e.schimmel.thetaSi)} °C, Schwelle ${fmtT(e.schimmel.thetaMin)} °C).
@@ -1067,11 +1070,11 @@ function htmlZusammenfassung(e) {
     <div class="hinweis-box">
       <strong>Annahmen und offene Punkte:</strong>
       <ul style="margin:4px 0 0;padding-left:1.2em">
-        <li>R<sub>si</sub> / R<sub>se</sub> nach DIN EN ISO 6946 für Wärmeschutz (nicht Feuchteschutz)</li>
-        <li>θ<sub>i</sub> = ${fmtT(e.ti)} °C, θ<sub>e</sub> = ${fmtT(e.te)} °C</li>
+        <li>U-Wert: R<sub>si</sub> = ${fmtR(rr.rsi)}, R<sub>se</sub> = ${fmtR(rr.rse)} m²K/W (Wärmestrom ${esc(RICHTUNG_LABEL[e.richtung] || e.richtung)}) nach DIN EN ISO 6946; θ<sub>i</sub> = ${fmtT(e.ti)} °C, θ<sub>e</sub> = ${fmtT(e.te)} °C</li>
+        <li>Schimmel und Tauwasser mit festen Randbedingungen nach DIN 4108-2/-3: θ<sub>i</sub> = ${fmtT(GLASER.tau.ti)} °C / ${Math.round(GLASER.tau.phiI * 100)} %, θ<sub>e</sub> = ${fmtT(GLASER.tau.te)} °C / ${Math.round(GLASER.tau.phiE * 100)} %, R<sub>si</sub> = ${fmtR(GLASER.rsi)} m²K/W – unabhängig von θ<sub>i</sub>/θ<sub>e</sub> oben</li>
         ${e.dU > 0 ? `<li>Korrekturwerte ΔU = ${fmtDU(e.dU)} W/(m²K) berücksichtigt</li>` : ''}
-        <li>Tabellenwerte aus Schneider Bautabellen, 26. Auflage (soweit Quelle angegeben)</li>
-        <li>Mit <span class="pruefen" style="display:inline">G</span> gekennzeichnete Normwerte gegen das Original prüfen</li>
+        ${m ? (m.geprueft ? `<li>R<sub>min</sub> = ${fmtR(m.rmin)} m²K/W gegen DIN 4108-2:${esc(m.din)}, Tabelle 3 geprüft (${esc(m.geprueft)})</li>` : `<li><span class="pruefen" style="display:inline">R<sub>min</sub> = ${fmtR(m.rmin)} m²K/W noch gegen DIN 4108-2:${esc(m.din)}, Tabelle 3 prüfen</span></li>`) : ''}
+        <li>Baustoffwerte aus Schneider Bautabellen, 26. Auflage (soweit Quelle angegeben)${ungeprueft.length ? `; <span class="pruefen" style="display:inline">ohne belegte Quelle: ${esc(ungeprueft.join(', '))}</span>` : ' – alle Schichten mit Quelle'}</li>
       </ul>
       <p style="margin:10px 0 0"><strong>Hinweis:</strong> Diese Berechnung ersetzt keinen Nachweis durch einen Fachplaner.</p>
     </div>
