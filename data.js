@@ -87,7 +87,8 @@ const R_MIN = {
       dach:            { rmin:1.20, zeile:'?', text:'Dach – Werte 2026 prüfen!' },
       decke_aussen:    { rmin:1.75, zeile:'?', text:'Decke – Werte 2026 prüfen!' },
       decke_unbeheizt: { rmin:0.90, zeile:'?', text:'Decke – Werte 2026 prüfen!' },
-      kellerdecke:     { rmin:0.90, zeile:'?', text:'Kellerdecke – Werte 2026 prüfen!' }
+      // vom Nutzer gegen DIN 4108-2:2026-05, Tabelle 3 geprüft (22.11.2026)
+      kellerdecke:     { rmin:0.90, zeile:'?', text:'Kellerdecke / gegen Erdreich', geprueft:'22.11.2026' }
     },
     niedrig: {
       aussenwand:      { rmin:0.55, zeile:'?', text:'Werte 2026 prüfen!' },

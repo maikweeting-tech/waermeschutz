@@ -143,7 +143,7 @@ function pruefeMin(bauteilId, raum, Rvorh, din) {
   const ref = tab[bt.rminKey];
   if (!ref) return null;
   const eta = ref.rmin / Rvorh;
-  return { rmin:ref.rmin, Rvorh, eta, ok: Rvorh >= ref.rmin, text:ref.text, zeile:ref.zeile, din };
+  return { rmin:ref.rmin, Rvorh, eta, ok: Rvorh >= ref.rmin, text:ref.text, zeile:ref.zeile, din, geprueft: ref.geprueft || '' };
 }
 
 // ── GModG: § 36 / Anlage 7 (Bestand) bzw. Referenzgebäude Anlage 1 (Neubau) ─
@@ -334,7 +334,7 @@ function nachweisKurz(e) {
   const m = e.minErg, g = e.gmodg, s = e.schimmel, f = e.feuchte;
   return {
     rb: { ti: r3(e.ti), te: r3(e.te), raum: e.raum || '', richtung: e.richtung || '' },
-    min: m ? { rmin: r3(m.rmin), Rvorh: r3(m.Rvorh), eta: r3(m.eta), ok: !!m.ok, zeile: String(m.zeile || ''), text: String(m.text || ''), din: String(m.din || '') } : null,
+    min: m ? { rmin: r3(m.rmin), Rvorh: r3(m.Rvorh), eta: r3(m.eta), ok: !!m.ok, zeile: String(m.zeile || ''), text: String(m.text || ''), din: String(m.din || ''), geprueft: String(m.geprueft || '') } : null,
     gmodg: g ? { fall: g.fall, Ur: r3(g.Ur), umax: r3(g.umax), ok: !!g.ok, keine: !!g.keineAnforderung,
       nr: g.zeile ? g.zeile.id : '', text: g.zeile ? g.zeile.text : (g.text || ''), zone: g.zone || '' } : null,
     schimmel: s ? { thetaSi: r3(s.thetaSi), thetaMin: r3(s.thetaMin), fRsi: r3(s.fRsi), ok: !!s.ok } : null,

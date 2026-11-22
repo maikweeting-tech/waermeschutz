@@ -799,7 +799,7 @@ function htmlNachweis(e) {
     <div class="tabwrap"><table class="tab">
       <thead><tr><th>Nachweis</th><th class="zahl">E<sub>d</sub> (R<sub>min</sub>)</th><th class="zahl">R<sub>d</sub> (R<sub>vorh</sub>)</th><th class="zahl">η</th><th>erfüllt</th></tr></thead>
       <tbody><tr>
-        <td>${esc(m.text)}<br><span class="klein hinweis">Zeile ${esc(m.zeile)}</span></td>
+        <td>${esc(m.text)}${m.zeile && m.zeile !== '?' ? `<br><span class="klein hinweis">Zeile ${esc(m.zeile)}</span>` : ''}</td>
         <td class="zahl mono">${fmtR(m.rmin)}</td>
         <td class="zahl mono">${fmtR(m.Rvorh)}</td>
         <td class="zahl mono">${fmtEta(m.eta)}</td>
@@ -812,7 +812,9 @@ function htmlNachweis(e) {
         <small>R<sub>vorh</sub> = ${fmtR(m.Rvorh)} ${m.ok ? '≥' : '<'} R<sub>min</sub> = ${fmtR(m.rmin)} m²K/W, η = ${fmtEta(m.eta)} ${m.ok ? '≤' : '>'} 1,0</small>
       </div>
     </div>
-    <p class="pruefen" style="margin-top:8px">R<sub>min</sub>-Wert aus dem Gedächtnis – gegen DIN 4108-2:${esc(m.din)}, Tabelle 3 prüfen!</p>
+    ${m.geprueft
+      ? `<p class="hinweis klein" style="margin-top:8px">✓ R<sub>min</sub> = ${fmtR(m.rmin)} m²K/W gegen DIN 4108-2:${esc(m.din)}, Tabelle 3 geprüft (${esc(m.geprueft)}).</p>`
+      : `<p class="pruefen" style="margin-top:8px">R<sub>min</sub>-Wert aus dem Gedächtnis – gegen DIN 4108-2:${esc(m.din)}, Tabelle 3 prüfen!</p>`}
     <p class="hinweis klein">§ 11 GModG verweist bis 31.12.2026 auf DIN 4108-2:2013-02, ab 01.01.2027 auf DIN 4108-2:2026-05.</p>
   </div>`;
 }
