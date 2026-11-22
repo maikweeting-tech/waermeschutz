@@ -333,14 +333,33 @@ function kopiereLink() {
     .catch(() => window.prompt('Link kopieren:', url));
 }
 
+// Heizlast-App schickt ein übernommenes Bauteil zum Bearbeiten zurück
+let _bearbeitName = '';
+if (EINGEBETTET) window.addEventListener('message', e => {
+  if (e.source !== window.parent || !e.data || e.data.typ !== 'fh21.bauteil-laden') return;
+  const z = e.data.zustand;
+  if (!z || !z.f || !Array.isArray(z.s)) return;
+  ladeZustand(z);
+  _bearbeitName = String(e.data.name || '');
+  _erg = null;
+  berechnen();
+  document.dispatchEvent(new Event('change')); // Zwischenspeicher aktualisieren
+  window.scrollTo(0, 0);
+  toast(`„${_bearbeitName}“ geladen – ändern und mit „An Heizlast-App übergeben“ unter demselben Namen zurückgeben.`);
+});
+
 function anHeizlast() {
   _erg = null;
   berechnen();
   if (!_erg) return;
   const bt = BAUTEILE.find(b => b.id === _erg.bauteilId);
-  const name = (window.prompt('Name des Bauteils für die Heizlast-App (z. B. „AW 1 – KS + WDVS“):', '') || '').trim();
+  const frage = _bearbeitName
+    ? `Name des Bauteils – derselbe Name aktualisiert „${_bearbeitName}“ in der Heizlast-App, ein anderer legt ein neues Bauteil an:`
+    : 'Name des Bauteils für die Heizlast-App (z. B. „AW 1 – KS + WDVS“):';
+  const name = (window.prompt(frage, _bearbeitName) || '').trim();
   if (!name) { toast('Kein Name – nichts übergeben.'); return; }
   const b = heizlastBauteil(_erg, name, bt ? bt.label : _erg.bauteilId, new Date().toISOString());
+  b.zustand = zustand(); // alle Eingaben, damit die Heizlast-App das Bauteil zum Bearbeiten zurückgeben kann
   if (EINGEBETTET) {
     window.parent.postMessage({ typ: 'fh21.bauteil', bauteil: b }, '*');
     return;
