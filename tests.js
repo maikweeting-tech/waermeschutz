@@ -235,6 +235,14 @@ const hb2 = heizlastBauteil({ U: 0.3, bauteilId: 'aussenwand', RT: 3, dU: 0, sR:
   { typ: 'baustoff', name: 'Eigenbau', quelle: '', R: 1 },
   { typ: 'luft_ruhend', name: '', quelle: '', R: 0.18 }] }, 'X', 'Außenwand', '2026-11-17T10:20:30.000Z');
 pruefe('Übergabe: ungeprüfte Schichten gemeldet', hb2.ungeprueft.join('|'), 'Zellulose|Eigenbau|Luftschicht (R aus Tabelle, ungeprüft)');
+// Nachweise in der Übergabe
+const hb3 = heizlastBauteil({ U: 0.2, bauteilId: 'aussenwand', RT: 5, dU: 0, ti: 20, te: -5, raum: 'normal', richtung: 'horizontal',
+  minErg: { rmin: 1.2, Rvorh: 4.83, eta: 0.248, ok: true, zeile: '1', text: 'Außenwände', din: '2013-02' },
+  gmodg: { fall: 'neubau', Ur: 0.2, umax: 0.28, ok: true, text: 'Außenwand' },
+  schimmel: { thetaSi: 19.17, thetaMin: 12.6, fRsi: 0.967, ok: true },
+  feuchte: { tauwasser: false, mc: 0, mev: 0, mcGrenze: 1, okMc: true, okEv: true, ok: true, ebenen: [] },
+  sR: [{ typ: 'baustoff', name: 'KS', d: 17.5, lambda: 0.99, R: 0.177, quelle: 'Schneider' }] }, 'AW N', 'Außenwand', '2026-11-22T10:00:00.000Z');
+pruefe('Übergabe: Nachweise enthalten', [hb3.nachweis.min.ok, hb3.nachweis.min.Rvorh, hb3.nachweis.gmodg.umax, hb3.nachweis.schimmel.thetaSi, hb3.nachweis.glaser.tauwasser].join('|'), 'true|4.83|0.28|19.17|false');
 // Fenster ohne Schichten
 const fb = fensterBauteil('Fenster 3-fach', 'Fenster', 0.9, 'Herstellerdatenblatt X', '2026-11-22T10:00:00.000Z');
 pruefe('Fenster: U_w, Art und Quelle übernommen', [fb.U, fb.art, fb.quelle, fb.schichten.length, fb.ungeprueft.length].join('|'), '0.9|Fenster|Herstellerdatenblatt X|0|0');

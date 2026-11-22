@@ -324,7 +324,22 @@ function heizlastBauteil(e, name, artLabel, datumIso) {
     // Schichten ohne belegte Quelle (λ aus dem Gedächtnis „ungeprüft“, eigene Eingabe ohne Quelle, Luftschicht-Tabelle)
     ungeprueft: e.sR.filter(s => s.typ === 'luft_ruhend' || !s.quelle || s.quelle === 'ungeprüft')
       .map(s => (s.typ === 'luft_ruhend' ? 'Luftschicht (R aus Tabelle, ungeprüft)' : (s.name || 'Schicht ohne Namen'))),
-    RT: Math.round(e.RT * 1000) / 1000, dU: Math.round(e.dU * 1000) / 1000
+    RT: Math.round(e.RT * 1000) / 1000, dU: Math.round(e.dU * 1000) / 1000,
+    nachweis: nachweisKurz(e)
+  };
+}
+// Kurzfassung der Nachweise für die Vorzeigeseite der Heizlast-App
+function nachweisKurz(e) {
+  const r3 = v => (typeof v === 'number' && isFinite(v) ? Math.round(v * 1000) / 1000 : null);
+  const m = e.minErg, g = e.gmodg, s = e.schimmel, f = e.feuchte;
+  return {
+    rb: { ti: r3(e.ti), te: r3(e.te), raum: e.raum || '', richtung: e.richtung || '' },
+    min: m ? { rmin: r3(m.rmin), Rvorh: r3(m.Rvorh), eta: r3(m.eta), ok: !!m.ok, zeile: String(m.zeile || ''), text: String(m.text || ''), din: String(m.din || '') } : null,
+    gmodg: g ? { fall: g.fall, Ur: r3(g.Ur), umax: r3(g.umax), ok: !!g.ok, keine: !!g.keineAnforderung,
+      nr: g.zeile ? g.zeile.id : '', text: g.zeile ? g.zeile.text : (g.text || ''), zone: g.zone || '' } : null,
+    schimmel: s ? { thetaSi: r3(s.thetaSi), thetaMin: r3(s.thetaMin), fRsi: r3(s.fRsi), ok: !!s.ok } : null,
+    glaser: !f ? null : f.muFehlt ? { muFehlt: f.muFehlt.map(String) }
+      : { tauwasser: !!f.tauwasser, mc: r3(f.mc), mev: r3(f.mev), mcGrenze: r3(f.mcGrenze), okMc: !!f.okMc, okEv: !!f.okEv, ok: !!f.ok, ebenen: (f.ebenen || []).length }
   };
 }
 // Fenster / Außentür ohne Schichten (U_w nach Herstellerangabe bzw. DIN EN ISO 10077)
