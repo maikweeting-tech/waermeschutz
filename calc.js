@@ -2,6 +2,12 @@
 /* Wärmeschutz-Rechner – Berechnungskern */
 
 // ── Formatierung (Komma als Dezimaltrennzeichen) ──────────────
+// R_si/R_se für den U-Wert je Wärmestromrichtung und Außenseite (siehe AUSSENSEITE in data.js)
+function uebergang(richtung, aussenseite) {
+  const r = RSI_RSE[richtung];
+  const rse = aussenseite === 'erdreich' ? 0 : aussenseite === 'innen' ? r.rsi : r.rse;
+  return { rsi: r.rsi, rse };
+}
 function fmtR(v)  { return v.toFixed(3).replace('.',','); }
 function fmtU(v)  { return v.toFixed(2).replace('.',','); }
 function fmtT(v)  { return v.toFixed(1).replace('.',','); }
@@ -333,7 +339,7 @@ function nachweisKurz(e) {
   const r3 = v => (typeof v === 'number' && isFinite(v) ? Math.round(v * 1000) / 1000 : null);
   const m = e.minErg, g = e.gmodg, s = e.schimmel, f = e.feuchte;
   return {
-    rb: { ti: r3(e.ti), te: r3(e.te), raum: e.raum || '', richtung: e.richtung || '' },
+    rb: { ti: r3(e.ti), te: r3(e.te), raum: e.raum || '', richtung: e.richtung || '', aussenseite: e.aussenseite || 'luft', rsi: r3(e.rsi), rse: r3(e.rse) },
     min: m ? { rmin: r3(m.rmin), Rvorh: r3(m.Rvorh), eta: r3(m.eta), ok: !!m.ok, zeile: String(m.zeile || ''), text: String(m.text || ''), din: String(m.din || ''), geprueft: String(m.geprueft || '') } : null,
     gmodg: g ? { fall: g.fall, Ur: r3(g.Ur), umax: r3(g.umax), ok: !!g.ok, keine: !!g.keineAnforderung,
       nr: g.zeile ? g.zeile.id : '', text: g.zeile ? g.zeile.text : (g.text || ''), zone: g.zone || '' } : null,

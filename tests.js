@@ -243,6 +243,12 @@ const hb3 = heizlastBauteil({ U: 0.2, bauteilId: 'aussenwand', RT: 5, dU: 0, ti:
   feuchte: { tauwasser: false, mc: 0, mev: 0, mcGrenze: 1, okMc: true, okEv: true, ok: true, ebenen: [] },
   sR: [{ typ: 'baustoff', name: 'KS', d: 17.5, lambda: 0.99, R: 0.177, quelle: 'Schneider' }] }, 'AW N', 'Außenwand', '2026-11-22T10:00:00.000Z');
 pruefe('Übergabe: Nachweise enthalten', [hb3.nachweis.min.ok, hb3.nachweis.min.Rvorh, hb3.nachweis.gmodg.umax, hb3.nachweis.schimmel.thetaSi, hb3.nachweis.glaser.tauwasser].join('|'), 'true|4.83|0.28|19.17|false');
+// Außenseite → R_se
+pruefe('R_se Außenluft (abwärts) 0,04', uebergang('abwaerts', 'luft').rse, 0.04);
+pruefe('R_se Erdreich 0', uebergang('abwaerts', 'erdreich').rse, 0);
+pruefe('R_se Innenraum/Keller = R_si (abwärts 0,17)', uebergang('abwaerts', 'innen').rse, 0.17);
+pruefe('R_si bleibt je Richtung', [uebergang('horizontal', 'erdreich').rsi, uebergang('aufwaerts', 'innen').rsi].join(), '0.13,0.1');
+pruefe('Kellerdecke-Beispiele haben eine Außenseite', BEISPIELE.filter(b => b.f.bauteil === 'kellerdecke').every(b => AUSSENSEITE[b.f.aussenseite]), true);
 // Fenster ohne Schichten
 const fb = fensterBauteil('Fenster 3-fach', 'Fenster', 0.9, 'Herstellerdatenblatt X', '2026-11-22T10:00:00.000Z');
 pruefe('Fenster: U_w, Art und Quelle übernommen', [fb.U, fb.art, fb.quelle, fb.schichten.length, fb.ungeprueft.length].join('|'), '0.9|Fenster|Herstellerdatenblatt X|0|0');

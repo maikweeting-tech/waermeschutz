@@ -9,6 +9,15 @@ const RSI_RSE = {
   aufwaerts:  { rsi: 0.10, rse: 0.04 },
   abwaerts:   { rsi: 0.17, rse: 0.04 }
 };
+// Außenseite des Bauteils → R_se (DIN EN ISO 6946; Schneider 26, Tafel 4.4a)
+// luft: R_se wie oben; erdreich: R_se = 0; innen: angrenzender Innenraum/unbeheizter Raum (z. B. Keller) → R_se = R_si
+// G: Werte für Erdreich und Innenraum aus dem Gedächtnis – gegen Tafel 4.4a prüfen, dann geprueft setzen
+const AUSSENSEITE = {
+  luft:     { label: 'Außenluft' },
+  erdreich: { label: 'Erdreich' },
+  innen:    { label: 'Innenraum / unbeheizter Raum (z. B. Keller)' }
+};
+const AUSSENSEITE_QUELLE = { text: 'DIN EN ISO 6946; Schneider 26, Tafel 4.4a', geprueft: false };
 
 // Ruhende (unbelüftete) Luftschichten [mm → m²K/W]
 // DIN EN ISO 6946:2018-03, Tabelle 2 – G
@@ -149,24 +158,24 @@ const BEISPIELE = [
     ['baustoff', 'Gipskartonplatte (900)', '', 1.25], ['baustoff', 'Mineralwolle (MW) 035', '', 6],
     ['baustoff', 'Vollziegel (1800)', '', 24], ['baustoff', 'Kalk-/Kalkzementputz (1800)', '', 2] ]},
   // Fußbodenaufbauten über unbeheiztem Keller (oben = innen)
-  { titel: 'Fußboden: Fliesen auf Heizestrich', f: { bauteil: 'kellerdecke' }, s: [
+  { titel: 'Fußboden: Fliesen auf Heizestrich', f: { bauteil: 'kellerdecke', aussenseite: 'innen' }, s: [
     ['baustoff', 'Fliesen, Keramik/Feinsteinzeug (2300)', '', 1], ['baustoff', 'Dünnbettmörtel / Fliesenkleber (1600)', '', 0.5],
     ['baustoff', 'Heizestrich (Zementestrich 2000)', '', 6.5], ['baustoff', 'PE-Folie 0,15 mm (s_d = 50 m)', '', 0.015],
     ['baustoff', 'Trittschalldämmung EPS-T 045', '', 3], ['baustoff', 'EPS (Styropor) 035', '', 10],
     ['baustoff', 'Stahlbeton (2300, 1 % Stahl)', '', 18] ]},
-  { titel: 'Fußboden: Parkett auf Zementestrich', f: { bauteil: 'kellerdecke' }, s: [
+  { titel: 'Fußboden: Parkett auf Zementestrich', f: { bauteil: 'kellerdecke', aussenseite: 'innen' }, s: [
     ['baustoff', 'Parkett Eiche (Laubholz 700)', '', 1.5], ['baustoff', 'Zementestrich (2000)', '', 5],
     ['baustoff', 'PE-Folie 0,15 mm (s_d = 50 m)', '', 0.015], ['baustoff', 'Mineralwolle (MW) 040', '', 3],
     ['baustoff', 'EPS (Styropor) 035', '', 10], ['baustoff', 'Stahlbeton (2300, 1 % Stahl)', '', 18] ]},
-  { titel: 'Fußboden: Linoleum auf Calciumsulfat-Fließestrich', f: { bauteil: 'kellerdecke' }, s: [
+  { titel: 'Fußboden: Linoleum auf Calciumsulfat-Fließestrich', f: { bauteil: 'kellerdecke', aussenseite: 'innen' }, s: [
     ['baustoff', 'Linoleum (1200)', '', 0.25], ['baustoff', 'Calciumsulfat-Fließestrich (2100)', '', 5],
     ['baustoff', 'PE-Folie 0,15 mm (s_d = 50 m)', '', 0.015], ['baustoff', 'Trittschalldämmung EPS-T 045', '', 3],
     ['baustoff', 'EPS (Styropor) 035', '', 10], ['baustoff', 'Stahlbeton (2300, 1 % Stahl)', '', 18] ]},
-  { titel: 'Fußboden: PVC-Belag auf Zementestrich', f: { bauteil: 'kellerdecke' }, s: [
+  { titel: 'Fußboden: PVC-Belag auf Zementestrich', f: { bauteil: 'kellerdecke', aussenseite: 'innen' }, s: [
     ['baustoff', 'Kunststoffbelag, z.B. PVC (1700)', '', 0.2], ['baustoff', 'Zementestrich (2000)', '', 5],
     ['baustoff', 'PE-Folie 0,15 mm (s_d = 50 m)', '', 0.015], ['baustoff', 'Trittschalldämmung EPS-T 045', '', 3],
     ['baustoff', 'EPS (Styropor) 035', '', 10], ['baustoff', 'Stahlbeton (2300, 1 % Stahl)', '', 18] ]},
-  { titel: 'Kellerdecke, unterseitig gedämmt', f: { bauteil: 'kellerdecke' }, s: [
+  { titel: 'Kellerdecke, unterseitig gedämmt', f: { bauteil: 'kellerdecke', aussenseite: 'innen' }, s: [
     ['baustoff', 'Zementestrich (2000)', '', 5], ['baustoff', 'EPS (Styropor) 040', '', 3],
     ['baustoff', 'Stahlbeton (2300, 1 % Stahl)', '', 18], ['baustoff', 'Mineralwolle (MW) 035', '', 10] ]},
   // Rechenbeispiel nach DIN 4108-3 aus Schneider 26, S. 4.31 (belüftete Luftschicht und
@@ -179,15 +188,15 @@ const BEISPIELE = [
   { titel: 'Altbau: Vollziegel ungedämmt', f: { bauteil: 'aussenwand' }, s: [
     ['baustoff', 'Kalk-/Kalkzementputz (1800)', '', 1.5], ['baustoff', 'Vollziegel (1800)', '', 24], ['baustoff', 'Kalk-/Kalkzementputz (1800)', '', 2] ]},
   // ── Vorlagen für Projekte (Dicken = Vorschlag, im Projekt anpassen; λ aus der Baustoff-Datenbank) ──
-  { gruppe: 'Vorlagen', titel: 'Kellerbodenplatte ohne Fußbodenaufbau (Perimeterdämmung XPS)', f: { bauteil: 'kellerdecke' }, s: [
+  { gruppe: 'Vorlagen', titel: 'Kellerbodenplatte ohne Fußbodenaufbau (Perimeterdämmung XPS)', f: { bauteil: 'kellerdecke', aussenseite: 'erdreich' }, s: [
     ['baustoff', 'Stahlbeton (2300, 1 % Stahl)', '', 25], ['baustoff', 'PE-Folie 0,25 mm (s_d = 100 m)', '', 0.025],
     ['baustoff', 'XPS 035', '', 12] ]},
-  { gruppe: 'Vorlagen', titel: 'Kellerbodenplatte mit Fußbodenaufbau (Estrich, Dämmung, XPS unter Platte)', f: { bauteil: 'kellerdecke' }, s: [
+  { gruppe: 'Vorlagen', titel: 'Kellerbodenplatte mit Fußbodenaufbau (Estrich, Dämmung, XPS unter Platte)', f: { bauteil: 'kellerdecke', aussenseite: 'erdreich' }, s: [
     ['baustoff', 'Zementestrich (2000)', '', 5], ['baustoff', 'PE-Folie 0,15 mm (s_d = 50 m)', '', 0.015],
     ['baustoff', 'Trittschalldämmung EPS-T 045', '', 3], ['baustoff', 'EPS (Styropor) 035', '', 8],
     ['baustoff', 'Bitumenbahn mit Einlage (DIN EN 13707)', '', 0.4], ['baustoff', 'Stahlbeton (2300, 1 % Stahl)', '', 25],
     ['baustoff', 'XPS 035', '', 12] ]},
-  { gruppe: 'Vorlagen', titel: 'Etagendecke Stahlbeton mit Fußbodenaufbau (Wärmestrom ↓)', f: { bauteil: 'kellerdecke' }, s: [
+  { gruppe: 'Vorlagen', titel: 'Etagendecke Stahlbeton mit Fußbodenaufbau (Wärmestrom ↓)', f: { bauteil: 'kellerdecke', aussenseite: 'innen' }, s: [
     ['baustoff', 'Zementestrich (2000)', '', 5], ['baustoff', 'PE-Folie 0,15 mm (s_d = 50 m)', '', 0.015],
     ['baustoff', 'Trittschalldämmung EPS-T 045', '', 3], ['baustoff', 'Stahlbeton (2300, 1 % Stahl)', '', 20],
     ['baustoff', 'Gipsputz (1000)', '', 1] ]},

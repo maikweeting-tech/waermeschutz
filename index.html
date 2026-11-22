@@ -66,6 +66,15 @@
         </select>
       </label>
     </div>
+    <div class="reihe">
+      <label class="feld">Außenseite grenzt an <span data-i="aussenseite"></span>
+        <select id="aussenseite">
+          <option value="luft">Außenluft</option>
+          <option value="erdreich">Erdreich (R_se = 0)</option>
+          <option value="innen">Innenraum / unbeheizter Raum, z. B. Keller (R_se = R_si)</option>
+        </select>
+      </label>
+    </div>
     <div class="reihe drei">
       <label class="feld">θ<sub>i</sub> <span data-i="theta_i"></span> <span class="einheit-label">[°C]</span>
         <input type="number" id="theta-i" value="20" step="any">

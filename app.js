@@ -153,12 +153,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ── Eingebettet in der Heizlast-App: keine Vorbelegungen ──────
 // Randbedingungen starten leer und müssen vor dem Berechnen gewählt werden.
-const LEER_FELDER = { bauteil: '', raum: '', richtung: '', 'theta-i': '', 'theta-e': '', 'din-ausgabe': '', 'lu-stufe': '', 'delta-ur': '' };
-const PFLICHT = [['bauteil', 'Bauteil'], ['raum', 'Raumnutzung'], ['richtung', 'Wärmestromrichtung'], ['theta-i', 'θ_i'], ['theta-e', 'θ_e'],
+const LEER_FELDER = { bauteil: '', raum: '', richtung: '', aussenseite: '', 'theta-i': '', 'theta-e': '', 'din-ausgabe': '', 'lu-stufe': '', 'delta-ur': '' };
+const PFLICHT = [['bauteil', 'Bauteil'], ['raum', 'Raumnutzung'], ['richtung', 'Wärmestromrichtung'],
+  ['aussenseite', 'Außenseite (bei Kellerdecke / Bodenplatte)'], ['theta-i', 'θ_i'], ['theta-e', 'θ_e'],
   ['din-ausgabe', 'Ausgabe DIN 4108-2'], ['gmodg-fall', 'Anforderung GModG'], ['gmodg-zeile', 'Maßnahme (Anlage 7)'],
   ['lu-stufe', 'Korrekturstufe Luftspalte ΔU_g (Stufe 0 = keine Korrektur)'], ['delta-ur', 'ΔU_r Umkehrdach (0 eintragen, wenn kein Umkehrdach)']];
 function leerStart() {
-  ['bauteil', 'raum', 'richtung', 'din-ausgabe', 'gmodg-fall', 'lu-stufe'].forEach(id => {
+  ['bauteil', 'raum', 'richtung', 'aussenseite', 'din-ausgabe', 'gmodg-fall', 'lu-stufe'].forEach(id => {
     const el = $(id);
     if (![...el.options].some(o => o.value === '')) el.insertAdjacentHTML('afterbegin', '<option value="">— wählen —</option>');
     el.value = '';
@@ -170,6 +171,7 @@ function leerStart() {
 function pflichtFehlt() {
   const fehlt = PFLICHT.filter(([id]) => {
     if (id === 'gmodg-zeile' && $('gmodg-fall').value !== 'bestand') return false;
+    if (id === 'aussenseite' && $('bauteil').value !== 'kellerdecke') return false;   // sonst leer = Außenluft
     if (id === 'delta-ur' && $('ur-schicht').value) return false;   // ΔU_r kommt dann aus Tafel 4.6b
     const el = $(id), leer = el.value === '' || (el.type === 'number' && isNaN(parseFloat(el.value)));
     el.classList.toggle('fehlt', leer);
@@ -263,10 +265,10 @@ function addSchicht() {
 }
 
 // ── Zustand speichern / laden (Beispiele, Teilen-Link) ────────
-const FELDER = ['bauteil','raum','richtung','theta-i','theta-e','din-ausgabe','lu-stufe','lu-schicht',
+const FELDER = ['bauteil','raum','richtung','aussenseite','theta-i','theta-e','din-ausgabe','lu-stufe','lu-schicht',
   'bef-aktiv','bef-nf','bef-dm','bef-lambda','bef-voll','bef-d1','bef-schicht','delta-ur','ur-schicht',
   'inhom-aktiv','inhom-nr','inhom-name','inhom-lambda','inhom-fa','inhom-fb','gmodg-fall','gmodg-zeile'];
-const STANDARD = { raum:'normal', 'theta-i':'20', 'theta-e':'-5', 'din-ausgabe':'2013-02', 'lu-stufe':'0', 'lu-schicht':'',
+const STANDARD = { raum:'normal', aussenseite:'luft', 'theta-i':'20', 'theta-e':'-5', 'din-ausgabe':'2013-02', 'lu-stufe':'0', 'lu-schicht':'',
   'bef-aktiv':false, 'bef-nf':'', 'bef-dm':'', 'bef-lambda':'', 'bef-voll':true, 'bef-d1':'', 'bef-schicht':'', 'delta-ur':'0', 'ur-schicht':'',
   'inhom-aktiv':false, 'inhom-nr':'', 'inhom-name':'', 'inhom-lambda':'', 'inhom-fa':'', 'inhom-fb':'',
   'gmodg-fall':'bestand', 'gmodg-zeile':'' };
@@ -279,6 +281,8 @@ function zustand() {
 }
 
 function ladeZustand(z) {
+  // ältere Zustände ohne Außenseite wurden mit Außenluft gerechnet
+  if (!('aussenseite' in z.f)) $('aussenseite').value = 'luft';
   FELDER.forEach(id => {
     if (!(id in z.f)) return;
     const el = $(id);
@@ -533,7 +537,8 @@ function berechnen() {
   if (!schichten.length) { toast('Mindestens eine Schicht mit d und λ eingeben.'); return; }
   if (isNaN(ti) || isNaN(te)) { toast('θ_i und θ_e eingeben.'); return; }
 
-  const { rsi, rse } = RSI_RSE[richtung];
+  const aussenseite = $('aussenseite').value || 'luft';
+  const { rsi, rse } = uebergang(richtung, aussenseite);
   const sR = schichten.map(s => ({ ...s, R: schichtR(s, richtung) }));
 
   // Inhomogene Schicht?
@@ -575,7 +580,7 @@ function berechnen() {
   const feuchte = muFehlt.length ? { muFehlt } : { ...glaserUnguenstig(schichten, richtung, bt && bt.rminKey === 'dach'), schichten };
   const gmodg = pruefeGModG($('gmodg-fall').value, bauteilId, $('gmodg-zeile').value, raum, U);
 
-  zeigeErgebnis({ sR, rsi, rse, RT, U0, dg, df, dUr, ur, dU, U, Rvorh, temp, minErg, gmodg, schimmel, feuchte, plaus, ti, te, richtung, bauteilId, raum, din, inhomErg });
+  zeigeErgebnis({ sR, rsi, rse, aussenseite, RT, U0, dg, df, dUr, ur, dU, U, Rvorh, temp, minErg, gmodg, schimmel, feuchte, plaus, ti, te, richtung, bauteilId, raum, din, inhomErg });
 }
 
 // ── Ergebnisanzeige ───────────────────────────────────────────
@@ -680,8 +685,18 @@ function htmlKopf(e) {
     <p class="erg-titel">Bauteil</p>
     <p><strong>${esc(bt ? bt.label : e.bauteilId)}</strong>, Wärmestrom ${rl},
        θ<sub>i</sub> = ${fmtT(e.ti)} °C, θ<sub>e</sub> = ${fmtT(e.te)} °C,
+       Außenseite: ${esc((AUSSENSEITE[e.aussenseite] || AUSSENSEITE.luft).label)},
        R<sub>si</sub> = ${fmtR(e.rsi)}, R<sub>se</sub> = ${fmtR(e.rse)} m²K/W</p>
+    ${rseHinweis(e)}
   </div>`;
+}
+// Hinweis zu R_se bei Erdreich / Innenraum, solange die Werte nicht gegen Tafel 4.4a geprüft sind
+function rseHinweis(e) {
+  if (e.aussenseite === 'luft' || !e.aussenseite) {
+    return e.bauteilId === 'kellerdecke' ? '<p class="pruefen">Kellerdecke / Bodenplatte mit Außenseite „Außenluft“ gerechnet – Erdreich oder Innenraum/Keller wählen.</p>' : '';
+  }
+  return AUSSENSEITE_QUELLE.geprueft ? '' :
+    `<p class="pruefen">R<sub>se</sub> = ${fmtR(e.rse)} m²K/W für „${esc(AUSSENSEITE[e.aussenseite].label)}“ nach ${esc(AUSSENSEITE_QUELLE.text)} – gegen das Original prüfen.</p>`;
 }
 
 // 1 – Schichttabelle
@@ -1052,7 +1067,7 @@ function htmlZusammenfassung(e) {
   const bt = BAUTEILE.find(b => b.id === e.bauteilId);
   const m = e.minErg;
   const minOk = m ? (m.ok ? 'erfüllt' : 'NICHT erfüllt') : 'nicht geprüft';
-  const rr = RSI_RSE[e.richtung] || {};
+  const asl = (AUSSENSEITE[e.aussenseite] || AUSSENSEITE.luft).label;
   const ungeprueft = e.sR.filter(s => s.typ === 'luft_ruhend' || !s.quelle || s.quelle === 'ungeprüft').map(s => s.typ === 'luft_ruhend' ? 'Luftschicht (R aus Tabelle)' : (s.name || 'Schicht ohne Namen'));
   return `<div class="karte" style="border-left:4px solid var(--gruen)">
     <p class="erg-titel">Zusammenfassung</p>
@@ -1070,7 +1085,7 @@ function htmlZusammenfassung(e) {
     <div class="hinweis-box">
       <strong>Annahmen und offene Punkte:</strong>
       <ul style="margin:4px 0 0;padding-left:1.2em">
-        <li>U-Wert: R<sub>si</sub> = ${fmtR(rr.rsi)}, R<sub>se</sub> = ${fmtR(rr.rse)} m²K/W (Wärmestrom ${esc(RICHTUNG_LABEL[e.richtung] || e.richtung)}) nach DIN EN ISO 6946; θ<sub>i</sub> = ${fmtT(e.ti)} °C, θ<sub>e</sub> = ${fmtT(e.te)} °C</li>
+        <li>U-Wert: R<sub>si</sub> = ${fmtR(e.rsi)}, R<sub>se</sub> = ${fmtR(e.rse)} m²K/W (Wärmestrom ${esc(RICHTUNG_LABEL[e.richtung] || e.richtung)}, Außenseite ${esc(asl)}) nach DIN EN ISO 6946${e.aussenseite && e.aussenseite !== 'luft' && !AUSSENSEITE_QUELLE.geprueft ? ' – <span class="pruefen" style="display:inline">R<sub>se</sub> gegen Schneider Tafel 4.4a prüfen</span>' : ''}; θ<sub>i</sub> = ${fmtT(e.ti)} °C, θ<sub>e</sub> = ${fmtT(e.te)} °C</li>
         <li>Schimmel und Tauwasser mit festen Randbedingungen nach DIN 4108-2/-3: θ<sub>i</sub> = ${fmtT(GLASER.tau.ti)} °C / ${Math.round(GLASER.tau.phiI * 100)} %, θ<sub>e</sub> = ${fmtT(GLASER.tau.te)} °C / ${Math.round(GLASER.tau.phiE * 100)} %, R<sub>si</sub> = ${fmtR(GLASER.rsi)} m²K/W – unabhängig von θ<sub>i</sub>/θ<sub>e</sub> oben</li>
         ${e.dU > 0 ? `<li>Korrekturwerte ΔU = ${fmtDU(e.dU)} W/(m²K) berücksichtigt</li>` : ''}
         ${m ? (m.geprueft ? `<li>R<sub>min</sub> = ${fmtR(m.rmin)} m²K/W gegen DIN 4108-2:${esc(m.din)}, Tabelle 3 geprüft (${esc(m.geprueft)})</li>` : `<li><span class="pruefen" style="display:inline">R<sub>min</sub> = ${fmtR(m.rmin)} m²K/W noch gegen DIN 4108-2:${esc(m.din)}, Tabelle 3 prüfen</span></li>`) : ''}
