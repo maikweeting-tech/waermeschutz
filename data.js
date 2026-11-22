@@ -198,10 +198,10 @@ const BEISPIELE = [
   { gruppe: 'Vorlagen', titel: 'Außenwand zweischalig: KS, Kerndämmung MW 035, Verblender', f: { bauteil: 'aussenwand' }, s: [
     ['baustoff', 'Gipsputz (1400)', '', 1.5], ['baustoff', 'Kalksandstein (1800)', '', 17.5],
     ['baustoff', 'Mineralwolle (MW) 035', '', 14], ['baustoff', 'Vollklinker (1800)', '', 11.5] ]},
-  { gruppe: 'Vorlagen', titel: 'Außenwand Holzständerwerk (KVH 6/16, e = 62,5 cm) mit Installationsebene', f: { bauteil: 'aussenwand', 'inhom-aktiv': true, 'inhom-nr': '4',
+  { gruppe: 'Vorlagen', titel: 'Außenwand Holzständerwerk (KVH 6/16, e = 62,5 cm) mit Installationsebene und Dampfbremse', f: { bauteil: 'aussenwand', 'inhom-aktiv': true, 'inhom-nr': '5',
       'inhom-name': 'Nadelholz / KVH (500)', 'inhom-lambda': '0.13', 'inhom-fa': '0.904', 'inhom-fb': '0.096' }, s: [
     ['baustoff', 'Gipskartonplatte (900)', '', 1.25], ['luft_ruhend', '', 'Installationsebene (ruhende Luft)', 4],
-    ['baustoff', 'OSB-Platte (650)', '', 1.8], ['baustoff', 'Mineralwolle (MW) 035', '', 16],
+    ['baustoff', 'OSB-Platte (650)', '', 1.8], ['baustoff', 'PE-Folie 0,15 mm (s_d = 50 m)', '', 0.015], ['baustoff', 'Mineralwolle (MW) 035', '', 16],
     ['baustoff', 'Holzfaserdämmplatte (WF) 040', '', 6], ['baustoff', 'Kalk-/Kalkzementputz (1800)', '', 1] ]},
 ];
 // Fenster und Türen: U_w kommt aus Herstellerangabe bzw. DIN EN ISO 10077 (nicht über Schichten);

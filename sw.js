@@ -1,4 +1,4 @@
-﻿const CACHE = 'ws-v23';
+﻿const CACHE = 'ws-v24';
 const ASSETS = ['./', 'index.html', 'app.css', 'data.js', 'calc.js', 'begriffe.js', 'app.js', 'icon.svg', 'icon-192.png', 'icon-512.png', 'manifest.json'];
 
 self.addEventListener('install', e => e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS.map(a => new Request(a, { cache: 'reload' })))).then(() => self.skipWaiting())));
