@@ -99,7 +99,17 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Aufgabe: Beispiele, Link, Drucken
-  BEISPIELE.forEach((b, i) => { const o = document.createElement('option'); o.value = i; o.textContent = b.titel; $('beispiel').appendChild(o); });
+  // Auswahl in Gruppen: Beispiele (Unterricht) und Vorlagen (Projekt)
+  const gruppen = {};
+  BEISPIELE.forEach((b, i) => {
+    const g = b.gruppe || 'Beispiele';
+    if (!gruppen[g]) { gruppen[g] = document.createElement('optgroup'); gruppen[g].label = g === 'Vorlagen' ? 'Vorlagen (Dicken anpassen)' : g; }
+    const o = document.createElement('option'); o.value = i; o.textContent = b.titel; gruppen[g].appendChild(o);
+  });
+  ['Vorlagen', 'Beispiele'].forEach(g => { if (gruppen[g]) $('beispiel').appendChild(gruppen[g]); });
+  // Fenster/Türen mit U_w direkt übergeben
+  FENSTER_UW.forEach(u => { const o = document.createElement('option'); o.value = u; o.textContent = 'U_w = ' + String(u.toFixed(1)).replace('.', ',') + ' W/(m²K)'; $('fenster-uw').appendChild(o); });
+  $('btn-fenster').addEventListener('click', fensterAnHeizlast);
   $('beispiel').addEventListener('change', e => {
     if (e.target.value === '') return;
     ladeZustand(beispielZustand(BEISPIELE[e.target.value]));
@@ -347,6 +357,23 @@ if (EINGEBETTET) window.addEventListener('message', e => {
   window.scrollTo(0, 0);
   toast(`„${_bearbeitName}“ geladen – ändern und mit „An Heizlast-App übergeben“ unter demselben Namen zurückgeben.`);
 });
+
+// Fenster / Außentür: kein Schichtaufbau, U_w aus Herstellerangabe – Quelle ist Pflicht
+function fensterAnHeizlast() {
+  const U = parseFloat($('fenster-uw').value), art = $('fenster-art').value;
+  const name = $('fenster-name').value.trim(), quelle = $('fenster-quelle').value.trim();
+  if (!isFinite(U)) { toast('U_w wählen.'); return; }
+  if (!name) { toast('Namen eintragen, z. B. „Fenster 3-fach U_w 0,9“.'); $('fenster-name').focus(); return; }
+  if (!quelle) { toast('Quelle für U_w eintragen (Herstellerangabe, DIN EN ISO 10077, Planung).'); $('fenster-quelle').focus(); return; }
+  const b = fensterBauteil(name, art, U, quelle, new Date().toISOString());
+  if (EINGEBETTET) { window.parent.postMessage({ typ: 'fh21.bauteil', bauteil: b }, '*'); return; }
+  let gespeichert = false;
+  try { const alt = JSON.parse(localStorage.getItem(FH21_BAUTEILE_KEY) || '[]'); localStorage.setItem(FH21_BAUTEILE_KEY, JSON.stringify(bauteilListeErgaenzen(alt, b))); gespeichert = true; } catch { /* nur Datei */ }
+  const blob = new Blob([JSON.stringify({ format: 'fh21.bauteile', version: 1, bauteile: [b] }, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'bauteil_' + name.replace(/[^\wäöüÄÖÜß-]+/g, '_') + '.json';
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  toast(`„${name}“ (U_w = ${fmtU(U)} W/(m²K)) übergeben${gespeichert ? ' – gespeichert und als Datei geladen' : ' – als Datei geladen'}.`);
+}
 
 function anHeizlast() {
   _erg = null;

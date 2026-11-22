@@ -327,6 +327,14 @@ function heizlastBauteil(e, name, artLabel, datumIso) {
     RT: Math.round(e.RT * 1000) / 1000, dU: Math.round(e.dU * 1000) / 1000
   };
 }
+// Fenster / Außentür ohne Schichten (U_w nach Herstellerangabe bzw. DIN EN ISO 10077)
+function fensterBauteil(name, art, U, quelle, datumIso) {
+  return {
+    id: 'ws-' + datumIso.replace(/\D/g, '').slice(0, 14),
+    name, art: art || 'Fenster', artId: art === 'Außentür' ? 'aussentuer' : 'fenster', U: Math.round(U * 1000) / 1000,
+    quelle, datum: datumIso, schichten: [], ungeprueft: [], RT: null, dU: null
+  };
+}
 // Liste ergänzen; gleicher Name ersetzt den alten Eintrag
 function bauteilListeErgaenzen(liste, b) {
   return (Array.isArray(liste) ? liste.filter(x => x.name !== b.name) : []).concat([b]);

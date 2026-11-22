@@ -176,7 +176,37 @@ const BEISPIELE = [
     ['baustoff', 'OSB-Platte (650)', '', 1.9] ]},
   { titel: 'Altbau: Vollziegel ungedämmt', f: { bauteil: 'aussenwand' }, s: [
     ['baustoff', 'Kalk-/Kalkzementputz (1800)', '', 1.5], ['baustoff', 'Vollziegel (1800)', '', 24], ['baustoff', 'Kalk-/Kalkzementputz (1800)', '', 2] ]},
+  // ── Vorlagen für Projekte (Dicken = Vorschlag, im Projekt anpassen; λ aus der Baustoff-Datenbank) ──
+  { gruppe: 'Vorlagen', titel: 'Kellerbodenplatte ohne Fußbodenaufbau (Perimeterdämmung XPS)', f: { bauteil: 'kellerdecke' }, s: [
+    ['baustoff', 'Stahlbeton (2300, 1 % Stahl)', '', 25], ['baustoff', 'PE-Folie 0,25 mm (s_d = 100 m)', '', 0.025],
+    ['baustoff', 'XPS 035', '', 12] ]},
+  { gruppe: 'Vorlagen', titel: 'Kellerbodenplatte mit Fußbodenaufbau (Estrich, Dämmung, XPS unter Platte)', f: { bauteil: 'kellerdecke' }, s: [
+    ['baustoff', 'Zementestrich (2000)', '', 5], ['baustoff', 'PE-Folie 0,15 mm (s_d = 50 m)', '', 0.015],
+    ['baustoff', 'Trittschalldämmung EPS-T 045', '', 3], ['baustoff', 'EPS (Styropor) 035', '', 8],
+    ['baustoff', 'Bitumenbahn mit Einlage (DIN EN 13707)', '', 0.4], ['baustoff', 'Stahlbeton (2300, 1 % Stahl)', '', 25],
+    ['baustoff', 'XPS 035', '', 12] ]},
+  { gruppe: 'Vorlagen', titel: 'Etagendecke Stahlbeton mit Fußbodenaufbau (Wärmestrom ↓)', f: { bauteil: 'kellerdecke' }, s: [
+    ['baustoff', 'Zementestrich (2000)', '', 5], ['baustoff', 'PE-Folie 0,15 mm (s_d = 50 m)', '', 0.015],
+    ['baustoff', 'Trittschalldämmung EPS-T 045', '', 3], ['baustoff', 'Stahlbeton (2300, 1 % Stahl)', '', 20],
+    ['baustoff', 'Gipsputz (1000)', '', 1] ]},
+  { gruppe: 'Vorlagen', titel: 'Außenwand KS + WDVS Mineralwolle (MW 035)', f: { bauteil: 'aussenwand' }, s: [
+    ['baustoff', 'Gipsputz (1400)', '', 1.5], ['baustoff', 'Kalksandstein (1800)', '', 17.5],
+    ['baustoff', 'Mineralwolle (MW) 035', '', 16], ['baustoff', 'Kalk-/Kalkzementputz (1800)', '', 1] ]},
+  { gruppe: 'Vorlagen', titel: 'Außenwand KS + WDVS EPS 032', f: { bauteil: 'aussenwand' }, s: [
+    ['baustoff', 'Gipsputz (1400)', '', 1.5], ['baustoff', 'Kalksandstein (1800)', '', 17.5],
+    ['baustoff', 'EPS (Styropor) 032', '', 16], ['baustoff', 'Kunstharzputz (1100)', '', 0.5] ]},
+  { gruppe: 'Vorlagen', titel: 'Außenwand zweischalig: KS, Kerndämmung MW 035, Verblender', f: { bauteil: 'aussenwand' }, s: [
+    ['baustoff', 'Gipsputz (1400)', '', 1.5], ['baustoff', 'Kalksandstein (1800)', '', 17.5],
+    ['baustoff', 'Mineralwolle (MW) 035', '', 14], ['baustoff', 'Vollklinker (1800)', '', 11.5] ]},
+  { gruppe: 'Vorlagen', titel: 'Außenwand Holzständerwerk (KVH 6/16, e = 62,5 cm) mit Installationsebene', f: { bauteil: 'aussenwand', 'inhom-aktiv': true, 'inhom-nr': '4',
+      'inhom-name': 'Nadelholz / KVH (500)', 'inhom-lambda': '0.13', 'inhom-fa': '0.904', 'inhom-fb': '0.096' }, s: [
+    ['baustoff', 'Gipskartonplatte (900)', '', 1.25], ['luft_ruhend', '', 'Installationsebene (ruhende Luft)', 4],
+    ['baustoff', 'OSB-Platte (650)', '', 1.8], ['baustoff', 'Mineralwolle (MW) 035', '', 16],
+    ['baustoff', 'Holzfaserdämmplatte (WF) 040', '', 6], ['baustoff', 'Kalk-/Kalkzementputz (1800)', '', 1] ]},
 ];
+// Fenster und Türen: U_w kommt aus Herstellerangabe bzw. DIN EN ISO 10077 (nicht über Schichten);
+// zur Auswahl in der Übergabe an die Heizlast-App – die Quelle muss eingetragen werden.
+const FENSTER_UW = [0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5];
 
 // Baustoff-Datenbank
 // lambda: Bemessungswert λ_B [W/(mK)] (null = keine Angabe, R wird vernachlässigt)

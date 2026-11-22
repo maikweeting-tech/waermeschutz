@@ -163,6 +163,10 @@ table.tab { width: 100%; border-collapse: collapse; font-size: .92rem; }
 .aufgabe label.feld { margin-bottom: 0; }
 .aufgabe-knoepfe { display: flex; gap: 8px; flex-wrap: wrap; }
 @media (min-width: 620px) { .aufgabe { grid-template-columns: 1fr auto; } }
+.fenster-uebergabe { margin-top: 8px; }
+.fenster-uebergabe summary { cursor: pointer; font-weight: 600; font-size: .92rem; }
+.fenster-felder { display: grid; gap: 4px 12px; margin: 8px 0; }
+@media (min-width: 620px) { .fenster-felder { grid-template-columns: 9rem 12rem 1fr; } .fenster-felder .fenster-quelle { grid-column: 1 / -1; } }
 
 /* Temperaturgrafik */
 .massstab { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }

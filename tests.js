@@ -235,6 +235,11 @@ const hb2 = heizlastBauteil({ U: 0.3, bauteilId: 'aussenwand', RT: 3, dU: 0, sR:
   { typ: 'baustoff', name: 'Eigenbau', quelle: '', R: 1 },
   { typ: 'luft_ruhend', name: '', quelle: '', R: 0.18 }] }, 'X', 'Außenwand', '2026-11-17T10:20:30.000Z');
 pruefe('Übergabe: ungeprüfte Schichten gemeldet', hb2.ungeprueft.join('|'), 'Zellulose|Eigenbau|Luftschicht (R aus Tabelle, ungeprüft)');
+// Fenster ohne Schichten
+const fb = fensterBauteil('Fenster 3-fach', 'Fenster', 0.9, 'Herstellerdatenblatt X', '2026-11-22T10:00:00.000Z');
+pruefe('Fenster: U_w, Art und Quelle übernommen', [fb.U, fb.art, fb.quelle, fb.schichten.length, fb.ungeprueft.length].join('|'), '0.9|Fenster|Herstellerdatenblatt X|0|0');
+pruefe('Fenster: Auswahl U_w 0,6 bis 1,5 in 0,1-Schritten', FENSTER_UW.join(';'), '0.6;0.7;0.8;0.9;1;1.1;1.2;1.3;1.4;1.5');
+pruefe('Vorlagen vorhanden (7)', BEISPIELE.filter(b => b.gruppe === 'Vorlagen').length, 7);
 
 // ── Syntax aller Skripte der Oberfläche (app.js wird sonst nicht geladen) ──
 for (const f of ['app.js', 'sw.js']) {

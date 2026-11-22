@@ -26,7 +26,7 @@
   <section class="karte no-print">
     <div class="aufgabe">
       <label class="feld">Beispiel laden <span data-i="beispiel"></span>
-        <select id="beispiel"><option value="">— Beispielaufbau wählen —</option></select>
+        <select id="beispiel"><option value="">— Vorlage oder Beispiel wählen —</option></select>
       </label>
       <div class="aufgabe-knoepfe">
         <button type="button" class="btn btn-klein" id="btn-link">Link teilen</button>
@@ -34,7 +34,17 @@
         <button type="button" class="btn btn-klein" id="btn-heizlast">An Heizlast-App übergeben</button> <span data-i="heizlast"></span>
       </div>
     </div>
-    <p class="hinweis klein">„Link teilen“ kopiert einen Link mit allen Eingaben – z.B. als Aufgabe für die Klasse. „An Heizlast-App übergeben“ speichert das Bauteil mit U-Wert für die Heizlast-App und lädt es zusätzlich als JSON-Datei herunter.</p>
+    <p class="hinweis klein">„Link teilen“ kopiert einen Link mit allen Eingaben – z.B. als Aufgabe für die Klasse. „An Heizlast-App übergeben“ speichert das Bauteil mit U-Wert für die Heizlast-App und lädt es zusätzlich als JSON-Datei herunter. Vorlagen sind Vorschläge: Schichtdicken an das Projekt anpassen.</p>
+    <details class="fenster-uebergabe">
+      <summary>Fenster oder Außentür übergeben (U_w aus Herstellerangabe, ohne Schichten)</summary>
+      <div class="fenster-felder">
+        <label class="feld">Art <select id="fenster-art"><option>Fenster</option><option>Außentür</option></select></label>
+        <label class="feld">U_w bzw. U_D in W/(m²K) <select id="fenster-uw"></select></label>
+        <label class="feld">Name <input type="text" id="fenster-name" placeholder="z. B. Fenster 3-fach U_w 0,9"></label>
+        <label class="feld fenster-quelle">Quelle U_w (Pflicht) <input type="text" id="fenster-quelle" placeholder="z. B. Herstellerdatenblatt …, U_w nach DIN EN ISO 10077-1"></label>
+      </div>
+      <button type="button" class="btn btn-klein" id="btn-fenster">Fenster an Heizlast-App übergeben</button>
+    </details>
   </section>
 
   <!-- ── Randbedingungen ──────────────────────── -->
