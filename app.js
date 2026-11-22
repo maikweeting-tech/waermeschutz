@@ -573,7 +573,7 @@ function berechnen() {
   const Rvorh = RT - rsi - rse;
   const temp = temperaturverlauf(sR, rsi, rse, RT, ti, te);
   const minErg = pruefeMin(bauteilId, raum, Rvorh, din);
-  const schimmel = pruefeSchimmel(Rvorh);
+  const schimmel = pruefeSchimmel(Rvorh, aussenseite);
   const plaus = plausChecks(U, bauteilId, sR);
   const bt = BAUTEILE.find(b => b.id === bauteilId);
   const muFehlt = schichten.filter(s => !(s.mu > 0)).map(s => s.name || '?');
@@ -893,7 +893,7 @@ erf R = R<sub>si</sub> · (θ<sub>i</sub> − θ<sub>e</sub>) / (θ<sub>i</sub> 
 erf U = (1 / R<sub>si</sub>) · (θ<sub>i</sub> − θ<sub>s</sub>) / (θ<sub>i</sub> − θ<sub>e</sub>) = ${fmtR(m.erfU)} W/(m²K)   (Temperaturfaktor f<sub>Rsi</sub> = ${fmtR(m.fRsi)})`;
   return `<div class="karte">
     <p class="erg-titel">6 – Schimmelnachweis (Schimmelpilzschwelle θ<sub>si,min</sub>) ${info('schimmel')}${info('fRsi')}</p>
-    <p class="hinweis">Randbedingungen: θ<sub>i</sub> = ${fmtT(m.ti)} °C, φ<sub>i</sub> = ${m.phi} %, θ<sub>e</sub> = ${fmtT(m.te)} °C, R<sub>si</sub> = ${fmtR(m.rsi)}, R<sub>se</sub> = ${fmtR(m.rse)} m²K/W (beheizte Räume). Unabhängig von θ<sub>i</sub>/θ<sub>e</sub> oben.</p>
+    <p class="hinweis">Randbedingungen: θ<sub>i</sub> = ${fmtT(m.ti)} °C, φ<sub>i</sub> = ${m.phi} %, θ<sub>e</sub> = ${fmtT(m.te)} °C, R<sub>si</sub> = ${fmtR(m.rsi)}, R<sub>se</sub> = ${fmtR(m.rse)} m²K/W (beheizte Räume${m.rse === 0 ? ', gegen Erdreich R<sub>se</sub> = 0' : ''}; Schneider 26, Tafel 4.4a). Unabhängig von θ<sub>i</sub>/θ<sub>e</sub> oben.</p>
     <div class="rechenweg">${rw}</div>
     <div class="ampel ${cls}" style="margin-top:12px">
       <div class="licht">${sym}</div>

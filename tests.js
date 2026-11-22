@@ -68,6 +68,9 @@ pruefe('Taupunkt-Näherung 20 °C / 62,5 % = 12,6 °C', fmtT(taupunkt(20, 62.5))
 pruefe('Taupunkt-Näherung 20 °C / 50 % = 9,3 °C (Tafel 4.24)', fmtT(taupunkt(20, 50)), '9,3');
 pruefe('Taupunkt-Näherung 10 °C / 80 % = 6,7 °C (Tafel 4.24)', fmtT(taupunkt(10, 80)), '6,7');
 pruefe('Schimmelpilzschwelle θ_si,min', pruefeSchimmel(1).thetaMin, 12.6);
+// Tafel 4.4a: gegen Erdreich R_se = 0 → R_T = 0,25 + 1 = 1,25 → θ_si = 20 − 25·0,25/1,25 = 15,0 °C
+pruefe('Schimmel gegen Erdreich: R_se = 0', [pruefeSchimmel(1, 'erdreich').rse, fmtT(pruefeSchimmel(1, 'erdreich').thetaSi)].join(), '0,15,0');
+pruefe('Schimmel Außenluft: R_se = 0,04', pruefeSchimmel(1, 'luft').rse, 0.04);
 // θ_si = 12,6 °C ↔ R_T = 0,25·25/7,4 = 0,8446 → R = 0,5546 (= erf R); θ_si = 12,5 °C ↔ R = 0,5433
 pruefe('erf R = 0,25·25/7,4 − 0,29', fmtR(pruefeSchimmel(1).erfR), '0,555');
 pruefe('θ_si = 12,6 °C → erfüllt', pruefeSchimmel(0.25 * 25 / 7.4 - 0.29).ok, true);

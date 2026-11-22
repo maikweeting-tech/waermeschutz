@@ -176,8 +176,10 @@ function taupunkt(theta, phi) {
 
 // ── Schimmelnachweis (Schneider 26, S. 4.24): Schimmelpilzschwelle ─
 // θ_si,min = Taupunkt bei φ_i,O = φ_i / 0,8 = 1,25·φ_i; 20 °C / 50 % → 62,5 % → 12,6 °C
-function pruefeSchimmel(R) {
-  const S = SCHIMMEL;
+// aussenseite 'erdreich': R_se = 0,00 (Schneider 26, Tafel 4.4a, Zeile „Gegen Erdreich“);
+// belüftete Luftschicht ('innen') bleibt bei R_se 0,04 – kleiner als R_si, also auf der sicheren Seite
+function pruefeSchimmel(R, aussenseite) {
+  const S = aussenseite === 'erdreich' ? { ...SCHIMMEL, rse: SCHIMMEL.rseErdreich } : SCHIMMEL;
   const RT = S.rsi + R + S.rse;
   const fRsi = 1 - S.rsi / RT;
   const thetaSi = S.ti - (S.ti - S.te) * S.rsi / RT;

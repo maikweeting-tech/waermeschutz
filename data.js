@@ -120,7 +120,8 @@ const DELTA_UG = { 0: 0, 1: 0.01, 2: 0.04 };
 // Schimmelnachweis an der inneren Oberfläche – Z (Schneider 26, S. 4.24, Tafel 4.24 und 4.4a):
 // Schimmelpilzschwelle = Taupunkt bei φ_i,O = φ_i / 0,8 (Kapillarkondensation ab 80 %);
 // θ_i = 20 °C, φ_i = 50 % → 62,5 % → θ_si ≥ 12,6 °C; θ_e = −5 °C; R_si = 0,25, R_se = 0,04 m²K/W
-const SCHIMMEL = { rsi: 0.25, rse: 0.04, ti: 20, te: -5, phi: 50, phiKapillar: 0.8 };
+// R_si/R_se vom Nutzer gegen Schneider 26, Tafel 4.4a geprüft (22.11.2026): beheizte Räume 0,25 / 0,04, gegen Erdreich R_se 0,00
+const SCHIMMEL = { rsi: 0.25, rse: 0.04, rseErdreich: 0, ti: 20, te: -5, phi: 50, phiKapillar: 0.8 };
 
 // α für Befestigungselemente: α = 0,8 · d₁/d₀ – Z (Schneider 26, Tafel 4.6a)
 const ALPHA_BEF = 0.8;
