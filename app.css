@@ -76,6 +76,10 @@ main { max-width: 820px; margin: 0 auto; padding: 16px 16px 64px; outline: none;
 .btn-voll { width: 100%; }
 .btn-icon { width: 40px; min-height: 40px; padding: 0; font-size: 1.3rem; line-height: 1; color: var(--rot); border-color: transparent; background: transparent; }
 .btn-icon:hover { background: var(--rot-hell); }
+.schicht-knoepfe { white-space: nowrap; padding-left: 0 !important; padding-right: 0 !important; }
+.schicht-knoepfe .btn-hoch, .schicht-knoepfe .btn-runter { width: 30px; font-size: .85rem; color: var(--text, #1f2933); }
+.schicht-knoepfe .btn-hoch:hover, .schicht-knoepfe .btn-runter:hover { background: var(--linie, #e3e6ea); }
+#schichten tr:first-child .btn-hoch, #schichten tr:last-child .btn-runter { visibility: hidden; }
 :focus-visible { outline: 3px solid var(--rost); outline-offset: 2px; }
 
 /* ── Formulare ─────────────────────────────────── */

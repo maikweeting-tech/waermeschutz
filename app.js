@@ -79,9 +79,17 @@ document.addEventListener('DOMContentLoaded', () => {
   // Schichten-Buttons
   $('btn-add').addEventListener('click', () => addSchicht());
   $('schichten').addEventListener('click', e => {
+    const tr = e.target.closest('tr');
+    if (!tr) return;
+    const nr = tr.rowIndex - $('schichten').rows[0].rowIndex + 1;   // 1-basiert
     if (e.target.closest('.btn-del')) {
-      const tr = e.target.closest('tr');
-      if ($('schichten').rows.length > 1) { tr.remove(); nummeriere(); }
+      if ($('schichten').rows.length > 1) { tr.remove(); schichtVerweise(n => (n === nr ? '' : n > nr ? n - 1 : n)); nummeriere(); nachSchichtAenderung(); }
+    } else if (e.target.closest('.btn-hoch') && tr.previousElementSibling) {
+      tr.parentNode.insertBefore(tr, tr.previousElementSibling);
+      schichtVerweise(n => (n === nr ? nr - 1 : n === nr - 1 ? nr : n)); nummeriere(); nachSchichtAenderung();
+    } else if (e.target.closest('.btn-runter') && tr.nextElementSibling) {
+      tr.parentNode.insertBefore(tr.nextElementSibling, tr);
+      schichtVerweise(n => (n === nr ? nr + 1 : n === nr + 1 ? nr : n)); nummeriere(); nachSchichtAenderung();
     }
   });
   $('schichten').addEventListener('change', e => {
@@ -240,6 +248,7 @@ function addSchicht() {
   const tb = $('schichten');
   const tr = document.createElement('tr');
   tr.innerHTML = `
+    <td class="schicht-knoepfe no-print"><button type="button" class="btn-hoch btn-icon" title="Schicht nach oben (Richtung innen)">▲</button><button type="button" class="btn-runter btn-icon" title="Schicht nach unten (Richtung außen)">▼</button></td>
     <td class="zahl nr-zelle"></td>
     <td><select class="typ-sel"><option value="baustoff">Baustoff</option><option value="luft_ruhend">Luftschicht</option></select></td>
     <td><select class="s-stoff">${stoffOptionen()}</select><input type="text" class="s-name" placeholder="oder eigener Baustoff"></td>
@@ -404,6 +413,22 @@ function anHeizlast() {
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   toast(`„${name}“ (U = ${fmtU(b.U)} W/(m²K)) übergeben${gespeichert ? ' – gespeichert und als Datei geladen' : ' – als Datei geladen'}.`);
+}
+
+// Felder, die auf eine Schicht-Nr. verweisen (Luftspalt, Befestigung, Umkehrdach, inhomogene Schicht),
+// beim Verschieben/Löschen mitführen
+const SCHICHT_VERWEISE = ['lu-schicht', 'bef-schicht', 'ur-schicht', 'inhom-nr'];
+function schichtVerweise(neu) {
+  SCHICHT_VERWEISE.forEach(id => {
+    const el = $(id), n = parseInt(el.value);
+    if (!el.value || !isFinite(n)) return;
+    const w = neu(n);
+    el.value = w === '' ? '' : String(w);
+  });
+}
+// Ergebnis neu rechnen, wenn es schon angezeigt wird
+function nachSchichtAenderung() {
+  if (!$('ergebnis').hidden) berechnen();
 }
 
 function nummeriere() {
