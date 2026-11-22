@@ -15,7 +15,7 @@ const RSI_RSE = {
 const AUSSENSEITE = {
   luft:     { label: 'Außenluft' },
   erdreich: { label: 'Erdreich' },
-  innen:    { label: 'Innenraum / unbeheizter Raum (z. B. Keller)' }
+  innen:    { label: 'Innenraum / unbeheizter Raum (Keller) / belüftete Luftschicht' }
 };
 const AUSSENSEITE_QUELLE = { text: 'DIN EN ISO 6946; Schneider 26, Tafel 4.4a', geprueft: false };
 
