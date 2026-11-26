@@ -367,7 +367,11 @@ if (EINGEBETTET) window.addEventListener('message', e => {
   _erg = null;
   berechnen();
   document.dispatchEvent(new Event('change')); // Zwischenspeicher aktualisieren
+  // Heizlast-Tab „3 Glaser“: direkt zum Glaser-Diagramm springen
+  // Der Rahmen in der Heizlast-App wächst mit dem Inhalt – deshalb die Lage nach oben melden, die Heizlast-Seite scrollt
+  const gb = e.data.ziel === 'glaser' && $('glaser-box');
   window.scrollTo(0, 0);
+  if (gb) setTimeout(() => { const k = [...document.querySelectorAll('.erg-titel')].find(t => /Glaser/.test(t.textContent)) || gb; window.parent.postMessage({ typ: 'fh21.scroll', y: k.getBoundingClientRect().top + window.scrollY }, '*'); }, 250);
   toast(`„${_bearbeitName}“ geladen – ändern und mit „An Heizlast-App übergeben“ unter demselben Namen zurückgeben.`);
 });
 
